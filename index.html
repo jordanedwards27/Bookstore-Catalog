@@ -298,7 +298,20 @@
 <script>
 // ── CONFIGURATION ───────────────────────────────────────────────────
 const CATALOG_CSV = "https://docs.google.com/spreadsheets/d/1TrXu2AxiIOXjHAnccFb2NVdx9EQlMNTVUvfCXl00jmo/gviz/tq?tqx=out:csv&sheet=Catalog%20Information";
-const SUBMIT_URL  = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE"; // paste after deploying Apps Script
+const FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSd6zRou_TG4e1g4NCDMVR_5fd3GjBYs3SocgbeE_52pyqzxEw/viewform";
+// Field entry IDs mapped to form fields:
+// entry.2063443297 = Full Name
+// entry.2045502891 = Email
+// entry.1211389596 = Department
+// entry.649660626  = Phone
+// entry.1149247074 = Item
+// entry.351137844  = Size
+// entry.1594216950 = Color
+// entry.1332801338 = Logo / Design
+// entry.682453688  = Custom Text
+// entry.218563050  = Quantity
+// entry.1728681119 = Special Instructions
+// entry.2067392112 = Estimated Price
 // ───────────────────────────────────────────────────────────────────
 
 const PLACEHOLDER_SVG = `<svg class="placeholder" width="52" height="52" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 3.75H14M10 3.75a2.25 2.25 0 01-4.5 0M10 3.75H8.25a2.25 2.25 0 00-2.25 2.25v0M14 3.75a2.25 2.25 0 004.5 0M14 3.75H15.75A2.25 2.25 0 0118 6v0"/></svg>`;
@@ -565,11 +578,7 @@ function updatePrice() {
 }
 
 // ── SUBMIT ───────────────────────────────────────────────────────────
-function genRef() {
-  return 'EMB-' + new Date().getFullYear() + '-' + String(Math.floor(Math.random()*9000)+1000);
-}
-
-async function submitRequest() {
+function submitRequest() {
   const name  = document.getElementById('fname').value.trim();
   const email = document.getElementById('femail').value.trim();
   const dept  = document.getElementById('fdept').value.trim();
@@ -579,42 +588,38 @@ async function submitRequest() {
     alert("Please enter the text you'd like embroidered."); return;
   }
 
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true; btn.textContent = 'Submitting…';
+  const qty     = document.getElementById('fqty').value;
+  const sizeEl  = document.getElementById('sizeGroup');
+  const size    = sizeEl.style.display !== 'none' ? document.getElementById('fsize').value : 'N/A';
+  const color   = document.getElementById('fcolor').value || 'N/A';
+  const custom  = logo.toLowerCase().includes('custom') ? document.getElementById('fcustomtext').value.trim() : '';
+  const notes   = document.getElementById('fnotes').value.trim();
+  const phone   = document.getElementById('fphone').value.trim();
+  const est     = currentProduct.cost ? '~$' + (currentProduct.cost * parseInt(qty)) : 'TBD';
 
-  const ref = genRef();
-  const qty = document.getElementById('fqty').value;
-  const sizeEl = document.getElementById('sizeGroup');
+  // Build pre-filled Google Form URL
+  const params = new URLSearchParams({
+    'entry.2063443297': name,
+    'entry.2045502891': email,
+    'entry.1211389596': dept,
+    'entry.649660626':  phone,
+    'entry.1149247074': currentProduct.name,
+    'entry.351137844':  size,
+    'entry.1594216950': color,
+    'entry.1332801338': logo,
+    'entry.682453688':  custom,
+    'entry.218563050':  qty,
+    'entry.1728681119': notes,
+    'entry.2067392112': est,
+  });
 
-  const row = {
-    timestamp:  new Date().toLocaleString(),
-    name, email,
-    department: dept,
-    phone:      document.getElementById('fphone').value.trim(),
-    item:       currentProduct.name,
-    size:       sizeEl.style.display !== 'none' ? document.getElementById('fsize').value : 'N/A',
-    color:      document.getElementById('fcolor').value || 'N/A',
-    logo,
-    customText: logo === 'Custom text' ? document.getElementById('fcustomtext').value.trim() : '',
-    qty,
-    notes:      document.getElementById('fnotes').value.trim(),
-    estPrice:   currentProduct.cost ? '~$'+(currentProduct.cost * parseInt(qty)) : 'TBD',
-    ref
-  };
+  // Open the pre-filled form in a new tab
+  window.open(FORM_BASE + '?' + params.toString(), '_blank');
 
-  if (SUBMIT_URL !== "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE") {
-    try {
-      await fetch(SUBMIT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body:JSON.stringify(row) });
-    } catch(e) { console.warn('Submission error:', e); }
-  } else {
-    console.log('Sheet URL not set yet. Data:', row);
-  }
-
-  btn.disabled = false; btn.textContent = 'Submit request →';
-
+  // Show confirmation in catalog
   document.getElementById('confirmBody').innerHTML =
-    `Thanks, ${name.split(' ')[0]}! The bookstore will contact you at <strong>${email}</strong> when your order is ready for pickup and payment.`;
-  document.getElementById('confirmRef').textContent = `Reference # ${ref} · Est. ready in 7–10 business days`;
+    `Thanks, ${name.split(' ')[0]}! A pre-filled form has opened in a new tab — just hit Submit there and the bookstore will contact you at <strong>${email}</strong> when your order is ready.`;
+  document.getElementById('confirmRef').textContent = `Est. ready in 7–10 business days after form submission`;
   document.getElementById('formView').style.display = 'none';
   document.getElementById('confirmView').classList.add('show');
 }
