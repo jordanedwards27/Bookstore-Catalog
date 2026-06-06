@@ -27,6 +27,8 @@
                      Always include "Custom Text" as an option if you want to allow it
    • Logo Images   — comma-separated preview image URLs matching each logo in "Logo Options"
                      Leave blank for logos without a preview image: "url1,,url3"
+   • Placement Options — comma-separated placement locations, e.g. "Left Chest,Right Chest,Back Yoke"
+                     If left blank, defaults to a standard set of placements
 
    2. Make sure the sheet is published:
       File → Share → Publish to web → Sheet1 → CSV → Publish
@@ -261,9 +263,27 @@
           </div>
         </div>
 
-        <div class="custom-text-wrap form-group" id="customTextWrap">
-          <label for="fcustomtext">Text to embroider *</label>
-          <input type="text" id="fcustomtext" placeholder="e.g. Dr. Smith · Biology Dept.">
+        <hr class="div">
+        <div class="section-label">Custom text</div>
+        <div class="form-row">
+          <div class="form-group full">
+            <label for="fcustomtext">Text to embroider (optional)</label>
+            <input type="text" id="fcustomtext" placeholder="e.g. Dr. Smith · Biology Dept.">
+          </div>
+          <div class="form-group full">
+            <label for="fplacement">Placement</label>
+            <select id="fplacement">
+              <option value="">-- Select placement --</option>
+              <option>Left chest</option>
+              <option>Right chest</option>
+              <option>Center chest</option>
+              <option>Back yoke</option>
+              <option>Left sleeve</option>
+              <option>Right sleeve</option>
+              <option>Front center (hat)</option>
+              <option>Side (hat)</option>
+            </select>
+          </div>
         </div>
 
         <div class="form-group full">
@@ -342,6 +362,7 @@ async function loadProducts() {
     const iColorImgs  = headers.indexOf('color images');
     const iLogoOpts   = headers.indexOf('logo options');
     const iLogoImgs   = headers.indexOf('logo images');
+    const iPlacement  = headers.indexOf('placement options');
 
     products = rows.slice(1)
       .filter(r => r[iItem] && r[iItem].trim())
@@ -354,7 +375,8 @@ async function loadProducts() {
         photo:       r[iPhoto]     ? r[iPhoto].trim() : '',
         colorImages: iColorImgs >= 0 && r[iColorImgs] ? r[iColorImgs].trim().split(',').map(u=>u.trim()) : [],
         logoOptions: iLogoOpts >= 0 && r[iLogoOpts]  ? r[iLogoOpts].trim().split(',').map(l=>l.trim()).filter(Boolean) : ['University Seal','Athletic Logo','Custom Text'],
-        logoImages:  iLogoImgs >= 0 && r[iLogoImgs]  ? r[iLogoImgs].trim().split(',').map(u=>u.trim()) : [],
+        logoImages:       iLogoImgs  >= 0 && r[iLogoImgs]  ? r[iLogoImgs].trim().split(',').map(u=>u.trim()) : [],
+        placementOptions: iPlacement >= 0 && r[iPlacement] ? r[iPlacement].trim().split(',').map(p=>p.trim()).filter(Boolean) : ['Left Chest','Right Chest','Center Chest','Back Yoke','Left Sleeve','Right Sleeve','Front Center (Hat)','Side (Hat)'],
       }));
 
     if (!products.length) {
@@ -473,10 +495,13 @@ function openModal(id) {
   // Build logo options
   buildLogoOptions(0);
 
+  // Build placement options
+  buildPlacementOptions();
+
   // Reset fields
   ['fname','femail','fdept','fphone','fnotes','fcustomtext'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('fqty').value = 1;
-  document.getElementById('customTextWrap').classList.remove('visible');
+  // custom text always visible
   updatePrice();
 
   document.getElementById('formView').style.display = '';
@@ -555,6 +580,13 @@ function selectLogo(i) {
   buildLogoOptions(i);
 }
 
+function buildPlacementOptions() {
+  const placements = currentProduct.placementOptions || [];
+  const sel = document.getElementById('fplacement');
+  sel.innerHTML = '<option value="">-- Select placement --</option>' +
+    placements.map(p => `<option>${p}</option>`).join('');
+}
+
 function closeModal() {
   document.getElementById('overlay').classList.remove('open');
   document.body.style.overflow = '';
@@ -565,10 +597,7 @@ function handleOverlayClick(e) {
 }
 
 function toggleCustomText() {
-  const val = document.getElementById('flogo').value.toLowerCase();
-  document.getElementById('customTextWrap').classList.toggle(
-    'visible', val.includes('custom text') || val.includes('custom')
-  );
+  // Custom text is always visible — no toggle needed
 }
 
 function updatePrice() {
@@ -584,16 +613,14 @@ function submitRequest() {
   const dept  = document.getElementById('fdept').value.trim();
   if (!name || !email || !dept) { alert('Please fill in your name, email, and department.'); return; }
   const logo = document.getElementById('flogo').value;
-  if (logo.toLowerCase().includes('custom') && !document.getElementById('fcustomtext').value.trim()) {
-    alert("Please enter the text you'd like embroidered."); return;
-  }
 
   const qty     = document.getElementById('fqty').value;
   const sizeEl  = document.getElementById('sizeGroup');
   const size    = sizeEl.style.display !== 'none' ? document.getElementById('fsize').value : 'N/A';
   const color   = document.getElementById('fcolor').value || 'N/A';
   const custom  = logo.toLowerCase().includes('custom') ? document.getElementById('fcustomtext').value.trim() : '';
-  const notes   = document.getElementById('fnotes').value.trim();
+  const notes     = document.getElementById('fnotes').value.trim();
+  const placement = document.getElementById('fplacement').value;
   const phone   = document.getElementById('fphone').value.trim();
   const est     = currentProduct.cost ? '~$' + (currentProduct.cost * parseInt(qty)) : 'TBD';
 
@@ -609,7 +636,7 @@ function submitRequest() {
     'entry.1332801338': logo,
     'entry.682453688':  custom,
     'entry.218563050':  qty,
-    'entry.1728681119': notes,
+    'entry.1728681119': [placement ? 'Placement: ' + placement : '', notes].filter(Boolean).join(' | '),
     'entry.2067392112': est,
   });
 
