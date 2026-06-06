@@ -337,6 +337,22 @@ function driveUrl(url) {
   return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w80` : url;
 }
 
+// Convert any Google Drive share link to a clean embeddable URL for storage
+function cleanDriveUrl(url) {
+  if (!url) return '';
+  url = url.trim();
+  // If it's already a thumbnail or uc URL, extract the ID and reformat
+  const m = url.match(/[-\w]{25,}/);
+  if (!m) return url; // not a Drive link, return as-is
+  return `https://drive.google.com/uc?export=view&id=${m[0]}`;
+}
+
+// Convert a comma-separated list of URLs
+function cleanDriveUrls(str) {
+  if (!str) return '';
+  return str.split(',').map(u => cleanDriveUrl(u.trim())).join(',');
+}
+
 function renderTable() {
   if (!products.length) {
     document.getElementById('itemsBody').innerHTML = '<tr class="loading-row"><td colspan="8">No items found. Click "Add item" to get started.</td></tr>';
@@ -402,10 +418,10 @@ async function saveItem() {
     sizes:      document.getElementById('fSizes').value.trim(),
     colors:     document.getElementById('fColors').value.trim(),
     cost:       document.getElementById('fCost').value.trim(),
-    photo:      document.getElementById('fPhoto').value.trim(),
-    colorImgs:  document.getElementById('fColorImages').value.trim(),
+    photo:      cleanDriveUrl(document.getElementById('fPhoto').value.trim()),
+    colorImgs:  cleanDriveUrls(document.getElementById('fColorImages').value.trim()),
     logoOpts:   document.getElementById('fLogoOptions').value.trim(),
-    logoImgs:   document.getElementById('fLogoImages').value.trim(),
+    logoImgs:   cleanDriveUrls(document.getElementById('fLogoImages').value.trim()),
     placements: document.getElementById('fPlacements').value.trim(),
     rowIdx:     editingIdx !== null ? products[editingIdx].rowIdx : null,
     action:     editingIdx !== null ? 'update' : 'append',
