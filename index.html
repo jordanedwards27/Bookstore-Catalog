@@ -619,7 +619,7 @@ function submitRequest() {
   const sizeEl  = document.getElementById('sizeGroup');
   const size    = sizeEl.style.display !== 'none' ? document.getElementById('fsize').value : 'N/A';
   const color   = document.getElementById('fcolor').value || 'N/A';
-  const custom  = logo.toLowerCase().includes('custom') ? document.getElementById('fcustomtext').value.trim() : '';
+  const custom  = document.getElementById('fcustomtext').value.trim();
   const notes     = document.getElementById('fnotes').value.trim();
   const placement = document.getElementById('fplacement').value;
   const phone   = document.getElementById('fphone').value.trim();
