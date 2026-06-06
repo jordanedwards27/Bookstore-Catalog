@@ -9,8 +9,11 @@
   /*
   ══════════════════════════════════════════════════════════════
    HOW TO MANAGE YOUR CATALOG — Google Sheet columns:
-   Item | Size Options | Color Options | Cost | Photo URL |
+   Item | Gender | Type | Size Options | Color Options | Cost | Photo URL |
    Color Images | Logo Options | Logo Images | Placement Options
+
+   • Gender — e.g. "Mens", "Womens", "Kids", "Unisex"
+   • Type   — e.g. "Shirt", "Jacket", "Hat", "Bag"
 
    • Size Options      — comma-separated, e.g. "XS,S,M,L,XL,XXL" (blank = no sizes)
    • Color Options     — comma-separated color names
@@ -55,6 +58,10 @@
   .filter-section { margin-bottom: 1.5rem; }
   .search-input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; font-size: 13px; font-family: var(--font-body); background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
   .search-input:focus { border-color: var(--primary); }
+  .filter-chip { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 20px; border: 1px solid var(--border); background: transparent; font-size: 12px; font-family: var(--font-body); color: var(--muted); cursor: pointer; margin: 2px; transition: all 0.15s; }
+  .filter-chip.active { background: var(--primary); border-color: var(--primary); color: #1a1a1a; font-weight: 600; }
+  .filter-chips { display: flex; flex-wrap: wrap; gap: 2px; }
+  .card-tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 10px; background: var(--light); color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
 
   /* ── CATALOG ── */
   main { padding: 1.5rem; }
@@ -63,7 +70,7 @@
   .sort-row { display: flex; gap: 6px; }
   .sort-btn { font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-family: var(--font-body); transition: all 0.15s; }
   .sort-btn.active { background: var(--primary); color: #1a1a1a; border-color: var(--primary); }
-  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 220px)); gap: 1rem; }
+  .grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1rem; }
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; width: 100%; }
   .card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
   .card-img { background: var(--light); height: 160px; overflow: hidden; position: relative; }
@@ -285,6 +292,7 @@
         </div>
 
         <button class="add-to-cart-btn" onclick="addToCart()">Add to cart →</button>
+        <button class="add-to-cart-btn" onclick="addAnotherSize()" style="background:var(--light);color:#1a1a1a;margin-top:6px;font-weight:500;font-size:13px">+ Add another size / option</button>
       </div>
     </div>
 
@@ -359,7 +367,9 @@ const PLACEHOLDER_SVG = `<svg class="placeholder" width="40" height="40" fill="n
 let products = [];
 let currentProduct = null;
 let sortMode = 'default';
-let cart = []; // array of item objects
+let cart = [];
+let activeGender = '';
+let activeType = '';
 
 // ── LOAD PRODUCTS ────────────────────────────────────────────────────
 async function loadProducts() {
@@ -377,6 +387,8 @@ async function loadProducts() {
     products = rows.slice(1).filter(r => r[col('item')] && r[col('item')].trim()).map((r, i) => ({
       id: i,
       name:             r[col('item')].trim(),
+      gender:           r[col('gender')] ? r[col('gender')].trim() : '',
+      type:             r[col('type')]   ? r[col('type')].trim()   : '',
       sizes:            r[col('size options')]      ? r[col('size options')].split(',').map(s=>s.trim()).filter(Boolean) : [],
       colors:           r[col('color options')]     ? r[col('color options')].split(',').map(c=>c.trim()).filter(Boolean) : [],
       cost:             r[col('cost')]              ? parseFloat(r[col('cost')].replace(/[^0-9.]/g,'')) || 0 : 0,
@@ -388,11 +400,47 @@ async function loadProducts() {
     }));
 
     if (!products.length) { showState('No items found. Fill in the Item column in your Sheet.'); return; }
-    document.getElementById('categoryFilters').innerHTML = `<span style="font-size:13px;color:var(--muted)">${products.length} item${products.length!==1?'s':''} in catalog</span>`;
+    buildFilters();
     renderGrid();
   } catch(e) {
     showState(`Error: ${e.message}`, true);
   }
+}
+
+function buildFilters() {
+  const genders = [...new Set(products.map(p=>p.gender).filter(Boolean))];
+  const types   = [...new Set(products.map(p=>p.type).filter(Boolean))];
+  const aside   = document.getElementById('categoryFilters');
+
+  let html = '';
+  if (genders.length) {
+    html += '<div class="filter-heading" style="margin-top:0">Gender</div><div class="filter-chips">';
+    html += `<button class="filter-chip active" onclick="setGender('',this)">All</button>`;
+    html += genders.map(g=>`<button class="filter-chip" onclick="setGender('${g}',this)">${g}</button>`).join('');
+    html += '</div><div style="height:12px"></div>';
+  }
+  if (types.length) {
+    html += '<div class="filter-heading">Type</div><div class="filter-chips">';
+    html += `<button class="filter-chip active" onclick="setType('',this)">All</button>`;
+    html += types.map(t=>`<button class="filter-chip" onclick="setType('${t}',this)">${t}</button>`).join('');
+    html += '</div><div style="height:12px"></div>';
+  }
+  html += `<div style="font-size:12px;color:var(--muted);margin-top:4px">${products.length} item${products.length!==1?'s':''} total</div>`;
+  aside.innerHTML = html;
+}
+
+function setGender(val, btn) {
+  activeGender = val;
+  btn.closest('.filter-chips').querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
+}
+
+function setType(val, btn) {
+  activeType = val;
+  btn.closest('.filter-chips').querySelectorAll('.filter-chip').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderGrid();
 }
 
 function parseCSV(text) {
@@ -421,7 +469,7 @@ function driveUrl(url) {
 // ── RENDER GRID ──────────────────────────────────────────────────────
 function renderGrid() {
   const search = document.getElementById('searchInput').value.toLowerCase();
-  let list = products.filter(p => p.name.toLowerCase().includes(search));
+  let list = products.filter(p => p.name.toLowerCase().includes(search) && (!activeGender || p.gender===activeGender) && (!activeType || p.type===activeType));
   if (sortMode==='low') list.sort((a,b)=>a.cost-b.cost);
   if (sortMode==='high') list.sort((a,b)=>b.cost-a.cost);
   if (!list.length) { showState('No items match your search.'); return; }
@@ -431,8 +479,9 @@ function renderGrid() {
         ${p.photo ? `<img src="${driveUrl(p.photo)}" alt="${p.name}" onerror="this.parentNode.innerHTML='${PLACEHOLDER_SVG.replace(/"/g,"'")}'" >` : PLACEHOLDER_SVG}
       </div>
       <div class="card-body">
+        ${(p.gender||p.type) ? `<div class="card-tag">${[p.gender,p.type].filter(Boolean).join(' · ')}</div>` : ''}
         <div class="card-name">${p.name}</div>
-        <div class="card-sub">${[p.colors.length?p.colors.length+' colors':'', p.sizes.length?p.sizes.join(' · '):'One size'].filter(Boolean).join(' · ')}</div>
+        <div class="card-sub">${[p.colors.length?p.colors.length+' colors':'', p.sizes.length?'Sizes: '+p.sizes.join(', '):'One size'].filter(Boolean).join(' · ')}</div>
         <div class="card-footer">
           <div><div class="est-label">Est. from</div><div class="est-price">${p.cost?'$'+p.cost:'Ask us'}</div></div>
           <button class="card-btn">Select →</button>
@@ -532,6 +581,41 @@ function buildLogoOptions(selectedIdx) {
 }
 
 function selectLogo(i) { buildLogoOptions(i); }
+
+function addAnotherSize() {
+  // Save current selections to cart then reset form for same product — keep modal open
+  const qty = Math.max(1, parseInt(document.getElementById('fqty').value)||1);
+  const sizeGrp = document.getElementById('sizeGroup');
+  const item = {
+    id:        Date.now(),
+    productId: currentProduct.id,
+    name:      currentProduct.name,
+    photo:     currentProduct.photo,
+    cost:      currentProduct.cost,
+    size:      sizeGrp.style.display!=='none' ? document.getElementById('fsize').value : 'N/A',
+    color:     document.getElementById('fcolor').value || 'N/A',
+    logo:      document.getElementById('flogo').value,
+    customText:document.getElementById('fcustomtext').value.trim(),
+    placement: document.getElementById('fplacement').value,
+    notes:     document.getElementById('fnotes').value.trim(),
+    qty,
+    est:       currentProduct.cost ? '~$'+(currentProduct.cost*qty) : 'TBD',
+  };
+  cart.push(item);
+  updateCartBadge();
+  // Reset just the size/qty/custom fields, keep color & logo
+  document.getElementById('fqty').value = 1;
+  document.getElementById('fcustomtext').value = '';
+  document.getElementById('fnotes').value = '';
+  if (sizeGrp.style.display !== 'none') document.getElementById('fsize').selectedIndex = 0;
+  updatePrice();
+  // Flash feedback
+  const btn = document.querySelector('.add-to-cart-btn + .add-to-cart-btn');
+  const orig = btn.textContent;
+  btn.textContent = '✓ Added! Pick another option below';
+  btn.style.background = '#d8f3dc';
+  setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1800);
+}
 
 function updatePrice() {
   const qty = Math.max(1, parseInt(document.getElementById('fqty').value)||1);
