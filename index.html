@@ -23,6 +23,10 @@
                      e.g. if Color Options is "Navy,Black,Cardinal" then Color Images
                      should be "url_for_navy,url_for_black,url_for_cardinal"
                      Leave blank for colors without a photo: "url1,,url3"
+   • Logo Options  — comma-separated logo/design names, e.g. "University Seal,Athletic Logo,Custom Text"
+                     Always include "Custom Text" as an option if you want to allow it
+   • Logo Images   — comma-separated preview image URLs matching each logo in "Logo Options"
+                     Leave blank for logos without a preview image: "url1,,url3"
 
    2. Make sure the sheet is published:
       File → Share → Publish to web → Sheet1 → CSV → Publish
@@ -137,6 +141,14 @@
   .color-swatch-btn.selected .color-swatch-label { color: var(--text); font-weight: 500; }
   .color-thumb { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
 
+  /* Logo preview */
+  .logo-preview-wrap { display: flex; flex-direction: column; gap: 8px; }
+  .logo-preview-img { width: 100%; height: 140px; object-fit: contain; background: var(--light); border-radius: 8px; padding: 8px; display: block; }
+  .logo-preview-placeholder { width: 100%; height: 140px; background: var(--light); border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.35; }
+  .logo-option-btns { display: flex; flex-wrap: wrap; gap: 6px; }
+  .logo-option-btn { padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: transparent; font-size: 12px; font-family: var(--font-body); color: var(--muted); cursor: pointer; transition: all 0.15s; }
+  .logo-option-btn.selected { border-color: #1a1a1a; color: #1a1a1a; font-weight: 500; background: var(--light); }
+
   .price-summary { background: var(--light); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; }
   .price-note { font-size: 11px; color: var(--muted); margin-top: 2px; }
   .price-val { font-size: 22px; font-weight: 500; color: #1a1a1a; }
@@ -232,13 +244,16 @@
             <label for="fsize">Size</label>
             <select id="fsize"></select>
           </div>
-          <div class="form-group">
-            <label for="flogo">Logo / design</label>
-            <select id="flogo" onchange="toggleCustomText()">
-              <option>University seal</option>
-              <option>Athletic dept. logo</option>
-              <option>Custom text</option>
-            </select>
+          <div class="form-group full" id="logoGroup">
+            <label>Logo / design</label>
+            <div class="logo-preview-wrap">
+              <div class="logo-preview-placeholder" id="logoPreviewPlaceholder">
+                <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M9 12l2 2 4-4"/></svg>
+              </div>
+              <img id="logoPreviewImg" class="logo-preview-img" src="" alt="Logo preview" style="display:none" onerror="this.style.display='none';document.getElementById('logoPreviewPlaceholder').style.display='flex'">
+              <div class="logo-option-btns" id="logoOptionBtns"></div>
+            </div>
+            <input type="hidden" id="flogo">
           </div>
           <div class="form-group">
             <label for="fqty">Quantity</label>
@@ -312,6 +327,8 @@ async function loadProducts() {
     const iCost       = headers.indexOf('cost');
     const iPhoto      = headers.indexOf('photo url');
     const iColorImgs  = headers.indexOf('color images');
+    const iLogoOpts   = headers.indexOf('logo options');
+    const iLogoImgs   = headers.indexOf('logo images');
 
     products = rows.slice(1)
       .filter(r => r[iItem] && r[iItem].trim())
@@ -323,6 +340,8 @@ async function loadProducts() {
         cost:        r[iCost]      ? parseFloat(r[iCost].replace(/[^0-9.]/g,'')) || 0 : 0,
         photo:       r[iPhoto]     ? r[iPhoto].trim() : '',
         colorImages: iColorImgs >= 0 && r[iColorImgs] ? r[iColorImgs].trim().split(',').map(u=>u.trim()) : [],
+        logoOptions: iLogoOpts >= 0 && r[iLogoOpts]  ? r[iLogoOpts].trim().split(',').map(l=>l.trim()).filter(Boolean) : ['University Seal','Athletic Logo','Custom Text'],
+        logoImages:  iLogoImgs >= 0 && r[iLogoImgs]  ? r[iLogoImgs].trim().split(',').map(u=>u.trim()) : [],
       }));
 
     if (!products.length) {
@@ -438,9 +457,11 @@ function openModal(id) {
     sizeGrp.style.display = 'none';
   }
 
+  // Build logo options
+  buildLogoOptions(0);
+
   // Reset fields
   ['fname','femail','fdept','fphone','fnotes','fcustomtext'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('flogo').value = 'University seal';
   document.getElementById('fqty').value = 1;
   document.getElementById('customTextWrap').classList.remove('visible');
   updatePrice();
@@ -488,6 +509,39 @@ function selectColor(i) {
   buildColorSwatches(i);
 }
 
+function buildLogoOptions(selectedIdx) {
+  const logos = currentProduct.logoOptions || [];
+  const logoImgs = currentProduct.logoImages || [];
+  const container = document.getElementById('logoOptionBtns');
+
+  container.innerHTML = logos.map((l, i) =>
+    `<button class="logo-option-btn${i===selectedIdx?' selected':''}" onclick="selectLogo(${i})">${l}</button>`
+  ).join('');
+
+  // Set hidden input
+  document.getElementById('flogo').value = logos[selectedIdx] || '';
+
+  // Show/hide custom text
+  toggleCustomText();
+
+  // Update logo preview image
+  const previewImg = document.getElementById('logoPreviewImg');
+  const previewPlaceholder = document.getElementById('logoPreviewPlaceholder');
+  const imgUrl = logoImgs[selectedIdx] ? driveUrl(logoImgs[selectedIdx]) : '';
+  if (imgUrl) {
+    previewImg.src = imgUrl;
+    previewImg.style.display = 'block';
+    previewPlaceholder.style.display = 'none';
+  } else {
+    previewImg.style.display = 'none';
+    previewPlaceholder.style.display = 'flex';
+  }
+}
+
+function selectLogo(i) {
+  buildLogoOptions(i);
+}
+
 function closeModal() {
   document.getElementById('overlay').classList.remove('open');
   document.body.style.overflow = '';
@@ -498,8 +552,9 @@ function handleOverlayClick(e) {
 }
 
 function toggleCustomText() {
+  const val = document.getElementById('flogo').value.toLowerCase();
   document.getElementById('customTextWrap').classList.toggle(
-    'visible', document.getElementById('flogo').value === 'Custom text'
+    'visible', val.includes('custom text') || val.includes('custom')
   );
 }
 
@@ -520,7 +575,7 @@ async function submitRequest() {
   const dept  = document.getElementById('fdept').value.trim();
   if (!name || !email || !dept) { alert('Please fill in your name, email, and department.'); return; }
   const logo = document.getElementById('flogo').value;
-  if (logo === 'Custom text' && !document.getElementById('fcustomtext').value.trim()) {
+  if (logo.toLowerCase().includes('custom') && !document.getElementById('fcustomtext').value.trim()) {
     alert("Please enter the text you'd like embroidered."); return;
   }
 
