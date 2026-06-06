@@ -8,46 +8,21 @@
 <style>
   /*
   ══════════════════════════════════════════════════════════════
-   HOW TO MANAGE YOUR CATALOG
-  ══════════════════════════════════════════════════════════════
-   1. Open your Google Sheet and fill in rows under these columns:
-      Item | Size Options | Color Options | Cost | Photo URL
+   HOW TO MANAGE YOUR CATALOG — Google Sheet columns:
+   Item | Size Options | Color Options | Cost | Photo URL |
+   Color Images | Logo Options | Logo Images | Placement Options
 
-   • Item          — product name, e.g. "Staff Polo Shirt"
-   • Size Options  — comma-separated, e.g. "XS,S,M,L,XL,XXL"
-                     Leave blank if the item has no sizes (e.g. hats, bags)
-   • Color Options — comma-separated color names, e.g. "Navy,Black,Cardinal"
-   • Cost          — number only, e.g. 28
-   • Photo URL     — main product photo URL (Google Drive or any public URL)
-   • Color Images  — comma-separated photo URLs matching each color in "Color Options"
-                     e.g. if Color Options is "Navy,Black,Cardinal" then Color Images
-                     should be "url_for_navy,url_for_black,url_for_cardinal"
-                     Leave blank for colors without a photo: "url1,,url3"
-   • Logo Options  — comma-separated logo/design names, e.g. "University Seal,Athletic Logo,Custom Text"
-                     Always include "Custom Text" as an option if you want to allow it
-   • Logo Images   — comma-separated preview image URLs matching each logo in "Logo Options"
-                     Leave blank for logos without a preview image: "url1,,url3"
-   • Placement Options — comma-separated placement locations, e.g. "Left Chest,Right Chest,Back Yoke"
-                     If left blank, defaults to a standard set of placements
-
-   2. Make sure the sheet is published:
-      File → Share → Publish to web → Sheet1 → CSV → Publish
-
-   3. To connect order submissions to this same sheet, add a second tab
-      called "Orders" and deploy the Apps Script below.
-
-  ══════════════════════════════════════════════════════════════
-   TO CONNECT ORDER SUBMISSIONS → GOOGLE SHEETS
-  ══════════════════════════════════════════════════════════════
-   1. In your Sheet: Extensions → Apps Script
-   2. Paste the doPost() function at the bottom of this file
-   3. Deploy → New deployment → Web App → Anyone → Deploy
-   4. Copy the Web App URL and paste it below replacing the placeholder
+   • Size Options      — comma-separated, e.g. "XS,S,M,L,XL,XXL" (blank = no sizes)
+   • Color Options     — comma-separated color names
+   • Color Images      — comma-separated URLs matching Color Options order
+   • Logo Options      — comma-separated logo names
+   • Logo Images       — comma-separated URLs matching Logo Options order
+   • Placement Options — comma-separated placements, e.g. "Left Chest,Back Yoke"
+   • Photo URL         — main product photo (Google Drive public link)
+   • Cost              — number only, e.g. 28
   ══════════════════════════════════════════════════════════════
   */
-
   :root {
-    --sheet-id: "1TrXu2AxiIOXjHAnccFb2NVdx9EQlMNTVUvfCXl00jmo";
     --primary: #fbbe00;
     --accent: #d4a000;
     --bg: #f5f2ed;
@@ -63,23 +38,25 @@
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; }
 
+  /* ── HEADER ── */
   header { background: #fbbe00; color: #1a1a1a; padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 90px; position: sticky; top: 0; z-index: 100; }
-  .header-logo { font-family: var(--font-display); font-size: 1.2rem; display: flex; align-items: center; gap: 10px; }
-  .header-logo span { color: var(--accent); }
-  .header-tag { font-size: 11px; background: rgba(0,0,0,0.1); color: #1a1a1a; border: 1px solid rgba(0,0,0,0.2); border-radius: 20px; padding: 3px 10px; letter-spacing: 0.05em; }
+  .header-logo { display: flex; align-items: center; }
+  .cart-btn { background: #1a1a1a; color: #fff; border: none; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; font-family: var(--font-body); cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background 0.15s; }
+  .cart-btn:hover { background: #333; }
+  .cart-badge { background: var(--primary); color: #1a1a1a; border-radius: 50%; width: 20px; height: 20px; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; }
 
+  /* ── BANNER ── */
   .banner { background: #fffbf2; border-bottom: 1px solid #e8dfc8; padding: 10px 2rem; display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
 
-  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 0; min-height: calc(100vh - 100px); }
-
+  /* ── LAYOUT ── */
+  .layout { display: grid; grid-template-columns: 220px 1fr; gap: 0; min-height: calc(100vh - 136px); }
   aside { background: var(--surface); border-right: 1px solid var(--border); padding: 1.5rem 1.25rem; }
   .filter-heading { font-size: 10px; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
   .filter-section { margin-bottom: 1.5rem; }
   .search-input { width: 100%; border: 1px solid var(--border); border-radius: var(--radius); padding: 8px 10px; font-size: 13px; font-family: var(--font-body); background: var(--bg); color: var(--text); outline: none; transition: border-color 0.15s; }
   .search-input:focus { border-color: var(--primary); }
-  #categoryFilters label { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 13px; cursor: pointer; }
-  #categoryFilters input[type=checkbox] { accent-color: var(--primary); width: 14px; height: 14px; cursor: pointer; }
 
+  /* ── CATALOG ── */
   main { padding: 1.5rem; }
   .catalog-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; flex-wrap: wrap; gap: 10px; }
   .catalog-title { font-family: var(--font-display); font-size: 1.5rem; color: #1a1a1a; font-weight: 700; letter-spacing: 0.02em; }
@@ -87,30 +64,28 @@
   .sort-btn { font-size: 12px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: transparent; color: var(--muted); cursor: pointer; font-family: var(--font-body); transition: all 0.15s; }
   .sort-btn.active { background: var(--primary); color: #1a1a1a; border-color: var(--primary); }
   .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 220px)); gap: 1rem; }
-
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: transform 0.15s, box-shadow 0.15s; width: 100%; }
   .card:hover { transform: translateY(-2px); box-shadow: 0 4px 20px rgba(0,0,0,0.08); }
   .card-img { background: var(--light); height: 160px; overflow: hidden; position: relative; }
-  .card-img img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; object-position: center; background: var(--light); padding: 8px; }
+  .card-img img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; background: var(--light); padding: 8px; }
   .card-img .placeholder { opacity: 0.25; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
   .card-body { padding: 12px; }
-  .card-name { font-weight: 500; font-size: 14px; color: var(--text); margin-bottom: 2px; }
+  .card-name { font-weight: 500; font-size: 14px; margin-bottom: 2px; }
   .card-sub { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
   .card-footer { display: flex; align-items: center; justify-content: space-between; }
   .est-label { font-size: 10px; color: var(--muted); }
-  .est-price { font-size: 16px; font-weight: 500; color: #1a1a1a; }
-  .card-btn { background: var(--primary); color: #1a1a1a; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-family: var(--font-body); cursor: pointer; white-space: nowrap; }
+  .est-price { font-size: 16px; font-weight: 500; }
+  .card-btn { background: var(--primary); color: #1a1a1a; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-family: var(--font-body); cursor: pointer; white-space: nowrap; font-weight: 600; }
   .card-btn:hover { background: var(--accent); }
-
   .state-msg { text-align: center; padding: 3rem; color: var(--muted); font-size: 14px; }
   .state-msg.error { color: #b91c1c; }
 
-  /* Modal */
+  /* ── ITEM MODAL ── */
   .overlay { display: none; position: fixed; inset: 0; background: rgba(10,20,35,0.5); z-index: 200; align-items: center; justify-content: center; padding: 1rem; }
   .overlay.open { display: flex; }
-  .modal { background: var(--surface); border-radius: 14px; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; }
+  .modal { background: var(--surface); border-radius: 14px; width: 100%; max-width: 560px; max-height: 90vh; overflow-y: auto; }
   .modal-header { padding: 1.25rem 1.5rem 1rem; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; position: sticky; top: 0; background: var(--surface); z-index: 1; border-radius: 14px 14px 0 0; }
-  .modal-title { font-family: var(--font-display); font-size: 1.3rem; color: #1a1a1a; line-height: 1.2; font-weight: 700; }
+  .modal-title { font-family: var(--font-display); font-size: 1.3rem; color: #1a1a1a; font-weight: 700; line-height: 1.2; }
   .modal-subtitle { font-size: 13px; color: var(--muted); margin-top: 2px; }
   .close-btn { background: var(--light); border: none; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; font-size: 16px; color: var(--muted); transition: background 0.15s; }
   .close-btn:hover { background: var(--border); }
@@ -121,50 +96,77 @@
   label { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
   input[type=text], input[type=email], input[type=tel], input[type=number], select, textarea {
     border: 1px solid var(--border); border-radius: 8px; padding: 9px 11px; font-size: 13px;
-    font-family: var(--font-body); background: var(--bg); color: var(--text); outline: none;
-    width: 100%; transition: border-color 0.15s;
+    font-family: var(--font-body); background: var(--bg); color: var(--text); outline: none; width: 100%; transition: border-color 0.15s;
   }
   input:focus, select:focus, textarea:focus { border-color: var(--primary); background: #fff; }
-  textarea { resize: vertical; min-height: 70px; }
+  textarea { resize: vertical; min-height: 60px; }
   hr.div { border: none; border-top: 1px solid var(--border); margin: 0; }
-  .section-label { font-size: 12px; font-weight: 500; color: #1a1a1a; }
+  .section-label { font-size: 12px; font-weight: 600; color: #1a1a1a; }
 
-  .custom-text-wrap { display: none; flex-direction: column; gap: 5px; }
-  .custom-text-wrap.visible { display: flex; }
-
-  /* Color preview */
+  /* Color swatches */
   .color-preview-img { width: 100%; height: 180px; object-fit: contain; background: var(--light); border-radius: 8px; padding: 8px; display: block; margin-bottom: 10px; }
   .color-preview-placeholder { width: 100%; height: 180px; background: var(--light); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 10px; opacity: 0.4; }
   .color-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
   .color-swatch-btn { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; background: none; border: none; font-family: var(--font-body); }
-  .color-swatch-circle { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); background: var(--light); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 600; color: var(--muted); transition: border-color 0.15s, transform 0.15s; }
+  .color-swatch-circle { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--border); background: var(--light); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: var(--muted); transition: border-color 0.15s, transform 0.15s; }
   .color-swatch-btn.selected .color-swatch-circle { border-color: #1a1a1a; border-width: 3px; transform: scale(1.1); }
-  .color-swatch-btn .color-swatch-label { font-size: 10px; color: var(--muted); max-width: 48px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .color-swatch-btn.selected .color-swatch-label { color: var(--text); font-weight: 500; }
+  .color-swatch-btn .color-swatch-label { font-size: 10px; color: var(--muted); max-width: 48px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .color-swatch-btn.selected .color-swatch-label { color: var(--text); font-weight: 600; }
   .color-thumb { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; }
 
-  /* Logo preview */
-  .logo-preview-wrap { display: flex; flex-direction: column; gap: 8px; }
-  .logo-preview-img { width: 100%; height: 140px; object-fit: contain; background: var(--light); border-radius: 8px; padding: 8px; display: block; }
-  .logo-preview-placeholder { width: 100%; height: 140px; background: var(--light); border-radius: 8px; display: flex; align-items: center; justify-content: center; opacity: 0.35; }
+  /* Logo options */
+  .logo-preview-img { width: 100%; height: 130px; object-fit: contain; background: var(--light); border-radius: 8px; padding: 8px; display: block; margin-bottom: 8px; }
+  .logo-preview-placeholder { width: 100%; height: 130px; background: var(--light); border-radius: 8px; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; opacity: 0.35; }
   .logo-option-btns { display: flex; flex-wrap: wrap; gap: 6px; }
   .logo-option-btn { padding: 5px 12px; border-radius: 20px; border: 1.5px solid var(--border); background: transparent; font-size: 12px; font-family: var(--font-body); color: var(--muted); cursor: pointer; transition: all 0.15s; }
-  .logo-option-btn.selected { border-color: #1a1a1a; color: #1a1a1a; font-weight: 500; background: var(--light); }
+  .logo-option-btn.selected { border-color: #1a1a1a; color: #1a1a1a; font-weight: 600; background: var(--light); }
 
+  /* Price + Add to cart */
   .price-summary { background: var(--light); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; justify-content: space-between; }
   .price-note { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .price-val { font-size: 22px; font-weight: 500; color: #1a1a1a; }
-  .submit-btn { width: 100%; background: var(--primary); color: #1a1a1a; border: none; border-radius: 8px; padding: 13px; font-size: 14px; font-weight: 600; font-family: var(--font-body); cursor: pointer; transition: background 0.15s; }
-  .submit-btn:hover { background: var(--accent); }
-  .submit-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+  .price-val { font-size: 22px; font-weight: 600; color: #1a1a1a; }
+  .add-to-cart-btn { width: 100%; background: var(--primary); color: #1a1a1a; border: none; border-radius: 8px; padding: 13px; font-size: 14px; font-weight: 700; font-family: var(--font-body); cursor: pointer; transition: background 0.15s; }
+  .add-to-cart-btn:hover { background: var(--accent); }
 
-  .confirm-screen { display: none; flex-direction: column; align-items: center; text-align: center; padding: 2.5rem 1.5rem; gap: 12px; }
-  .confirm-screen.show { display: flex; }
-  .confirm-icon { width: 56px; height: 56px; background: #d8f3dc; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-  .confirm-title { font-family: var(--font-display); font-size: 1.4rem; color: #1a1a1a; }
-  .confirm-body { font-size: 13px; color: var(--muted); line-height: 1.7; max-width: 340px; }
-  .confirm-ref { font-size: 12px; background: var(--light); border-radius: 6px; padding: 6px 14px; color: var(--muted); }
-  .confirm-close { margin-top: 8px; background: var(--primary); color: #1a1a1a; border: none; border-radius: 8px; padding: 10px 24px; font-size: 13px; font-family: var(--font-body); cursor: pointer; }
+  /* ── CART DRAWER ── */
+  .cart-overlay { display: none; position: fixed; inset: 0; background: rgba(10,20,35,0.4); z-index: 300; }
+  .cart-overlay.open { display: block; }
+  .cart-drawer { position: fixed; top: 0; right: -480px; width: 460px; max-width: 100vw; height: 100vh; background: var(--surface); z-index: 301; display: flex; flex-direction: column; transition: right 0.3s ease; box-shadow: -4px 0 30px rgba(0,0,0,0.12); }
+  .cart-drawer.open { right: 0; }
+  .cart-drawer-header { padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+  .cart-drawer-title { font-family: var(--font-display); font-size: 1.3rem; font-weight: 700; color: #1a1a1a; }
+  .cart-drawer-body { flex: 1; overflow-y: auto; padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 10px; }
+  .cart-empty { text-align: center; padding: 3rem 1rem; color: var(--muted); font-size: 14px; }
+  .cart-item { background: var(--light); border-radius: 10px; padding: 12px; display: flex; gap: 10px; align-items: flex-start; }
+  .cart-item-img { width: 56px; height: 56px; border-radius: 8px; object-fit: contain; background: var(--surface); padding: 4px; flex-shrink: 0; }
+  .cart-item-img-placeholder { width: 56px; height: 56px; border-radius: 8px; background: var(--surface); display: flex; align-items: center; justify-content: center; flex-shrink: 0; opacity: 0.4; }
+  .cart-item-info { flex: 1; min-width: 0; }
+  .cart-item-name { font-weight: 600; font-size: 13px; margin-bottom: 2px; }
+  .cart-item-detail { font-size: 11px; color: var(--muted); line-height: 1.6; }
+  .cart-item-price { font-size: 13px; font-weight: 600; color: #1a1a1a; white-space: nowrap; }
+  .cart-item-remove { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 16px; padding: 0 0 0 6px; line-height: 1; flex-shrink: 0; }
+  .cart-item-remove:hover { color: #b91c1c; }
+  .cart-drawer-footer { padding: 1rem 1.5rem; border-top: 1px solid var(--border); flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; }
+  .cart-info-section { display: flex; flex-direction: column; gap: 8px; }
+  .cart-info-label { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.05em; text-transform: uppercase; }
+  .cart-info-input { border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 13px; font-family: var(--font-body); background: var(--bg); color: var(--text); outline: none; width: 100%; transition: border-color 0.15s; }
+  .cart-info-input:focus { border-color: var(--primary); background: #fff; }
+  .cart-info-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .cart-total { display: flex; justify-content: space-between; align-items: center; font-size: 14px; font-weight: 600; padding: 6px 0; }
+  .cart-total-note { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .submit-all-btn { width: 100%; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; padding: 13px; font-size: 14px; font-weight: 700; font-family: var(--font-body); cursor: pointer; transition: background 0.15s; }
+  .submit-all-btn:hover { background: #333; }
+  .submit-all-btn:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+  /* ── CONFIRM SCREEN (in item modal) ── */
+  .added-screen { display: none; flex-direction: column; align-items: center; text-align: center; padding: 2rem 1.5rem; gap: 12px; }
+  .added-screen.show { display: flex; }
+  .added-icon { width: 56px; height: 56px; background: #d8f3dc; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .added-title { font-family: var(--font-display); font-size: 1.3rem; color: #1a1a1a; font-weight: 700; }
+  .added-body { font-size: 13px; color: var(--muted); line-height: 1.6; }
+  .added-actions { display: flex; gap: 8px; width: 100%; margin-top: 4px; }
+  .added-continue { flex: 1; background: var(--light); color: #1a1a1a; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 600; font-family: var(--font-body); cursor: pointer; }
+  .added-viewcart { flex: 1; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; padding: 10px; font-size: 13px; font-weight: 600; font-family: var(--font-body); cursor: pointer; }
 </style>
 </head>
 <body>
@@ -173,12 +175,16 @@
   <div class="header-logo">
     <img src="https://raw.githubusercontent.com/jordanedwards27/Bookstore-Catalog/main/TIGER_HORIZONTAL_TM-01%20(1).png" alt="Logo" style="height:70px;width:auto;object-fit:contain;" onerror="this.style.display='none'">
   </div>
-  <span style="font-size:12px;color:rgba(0,0,0,0.5)">Faculty &amp; Staff Catalog</span>
+  <button class="cart-btn" onclick="openCart()">
+    <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+    Cart
+    <div class="cart-badge" id="cartBadge">0</div>
+  </button>
 </header>
 
 <div class="banner">
   <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M12 8v4m0 4h.01"/></svg>
-  Pricing shown is an estimate. Final price confirmed and payment collected in person at the bookstore when your order is ready.
+  Pricing shown is an estimate. Final price confirmed and payment collected in person at the bookstore.
 </div>
 
 <div class="layout">
@@ -188,11 +194,10 @@
       <input class="search-input" type="text" id="searchInput" placeholder="Search items..." oninput="renderGrid()">
     </div>
     <div class="filter-section">
-      <div class="filter-heading">Category</div>
-      <div id="categoryFilters"><label><input type="checkbox" checked disabled> All items</label></div>
+      <div class="filter-heading">Items</div>
+      <div id="categoryFilters"></div>
     </div>
   </aside>
-
   <main>
     <div class="catalog-header">
       <div class="catalog-title">Browse &amp; Request</div>
@@ -206,7 +211,7 @@
   </main>
 </div>
 
-<!-- MODAL -->
+<!-- ITEM MODAL -->
 <div class="overlay" id="overlay" onclick="handleOverlayClick(event)">
   <div class="modal" id="modal">
     <div id="formView">
@@ -218,25 +223,14 @@
         <button class="close-btn" onclick="closeModal()" aria-label="Close">✕</button>
       </div>
       <div class="modal-body">
-        <div class="section-label">Your information</div>
-        <div class="form-row">
-          <div class="form-group"><label for="fname">Full name *</label><input type="text" id="fname" placeholder="Jane Smith"></div>
-          <div class="form-group"><label for="femail">Email *</label><input type="email" id="femail" placeholder="jsmith@university.edu"></div>
-          <div class="form-group"><label for="fdept">Department *</label><input type="text" id="fdept" placeholder="e.g. College of Engineering"></div>
-          <div class="form-group"><label for="fphone">Phone (optional)</label><input type="tel" id="fphone" placeholder="555-000-1234"></div>
-        </div>
-
-        <hr class="div">
         <div class="section-label">Item options</div>
 
         <div id="colorGroup" class="form-group full">
           <label>Color</label>
-          <div id="colorPreviewWrap">
-            <div class="color-preview-placeholder" id="colorPreviewPlaceholder">
-              <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5"/></svg>
-            </div>
-            <img id="colorPreviewImg" class="color-preview-img" src="" alt="Color preview" style="display:none" onerror="this.style.display='none';document.getElementById('colorPreviewPlaceholder').style.display='flex'">
+          <div class="color-preview-placeholder" id="colorPreviewPlaceholder">
+            <svg width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5"/></svg>
           </div>
+          <img id="colorPreviewImg" class="color-preview-img" src="" alt="Color preview" style="display:none" onerror="this.style.display='none';document.getElementById('colorPreviewPlaceholder').style.display='flex'">
           <div class="color-swatches" id="colorSwatches"></div>
           <input type="hidden" id="fcolor">
         </div>
@@ -246,25 +240,24 @@
             <label for="fsize">Size</label>
             <select id="fsize"></select>
           </div>
-          <div class="form-group full" id="logoGroup">
-            <label>Logo / design</label>
-            <div class="logo-preview-wrap">
-              <div class="logo-preview-placeholder" id="logoPreviewPlaceholder">
-                <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M9 12l2 2 4-4"/></svg>
-              </div>
-              <img id="logoPreviewImg" class="logo-preview-img" src="" alt="Logo preview" style="display:none" onerror="this.style.display='none';document.getElementById('logoPreviewPlaceholder').style.display='flex'">
-              <div class="logo-option-btns" id="logoOptionBtns"></div>
-            </div>
-            <input type="hidden" id="flogo">
-          </div>
           <div class="form-group">
             <label for="fqty">Quantity</label>
             <input type="number" id="fqty" value="1" min="1" max="999" oninput="updatePrice()">
           </div>
         </div>
 
+        <div class="form-group full" id="logoGroup">
+          <label>Logo / design</label>
+          <div class="logo-preview-placeholder" id="logoPreviewPlaceholder">
+            <svg width="36" height="36" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" d="M9 12l2 2 4-4"/></svg>
+          </div>
+          <img id="logoPreviewImg" class="logo-preview-img" src="" alt="Logo preview" style="display:none" onerror="this.style.display='none';document.getElementById('logoPreviewPlaceholder').style.display='flex'">
+          <div class="logo-option-btns" id="logoOptionBtns"></div>
+          <input type="hidden" id="flogo">
+        </div>
+
         <hr class="div">
-        <div class="section-label">Custom text</div>
+        <div class="section-label">Custom text &amp; placement</div>
         <div class="form-row">
           <div class="form-group full">
             <label for="fcustomtext">Text to embroider (optional)</label>
@@ -274,418 +267,420 @@
             <label for="fplacement">Placement</label>
             <select id="fplacement">
               <option value="">-- Select placement --</option>
-              <option>Left chest</option>
-              <option>Right chest</option>
-              <option>Center chest</option>
-              <option>Back yoke</option>
-              <option>Left sleeve</option>
-              <option>Right sleeve</option>
-              <option>Front center (hat)</option>
-              <option>Side (hat)</option>
             </select>
           </div>
         </div>
 
         <div class="form-group full">
           <label for="fnotes">Special instructions (optional)</label>
-          <textarea id="fnotes" placeholder="Placement preference, rush request, anything else…"></textarea>
+          <textarea id="fnotes" placeholder="Rush request, anything else the bookstore should know…"></textarea>
         </div>
 
         <div class="price-summary">
           <div>
-            <div style="font-size:13px;font-weight:500;">Estimated total</div>
+            <div style="font-size:13px;font-weight:600;">Estimated price</div>
             <div class="price-note">No payment here · collected in person at pickup</div>
           </div>
           <div class="price-val" id="priceDisplay">~$0</div>
         </div>
 
-        <button class="submit-btn" id="submitBtn" onclick="submitRequest()">Submit request →</button>
+        <button class="add-to-cart-btn" onclick="addToCart()">Add to cart →</button>
       </div>
     </div>
 
-    <div class="confirm-screen" id="confirmView">
-      <div class="confirm-icon">
+    <div class="added-screen" id="addedView">
+      <div class="added-icon">
         <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#2d6a4f" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
       </div>
-      <div class="confirm-title">Request submitted!</div>
-      <div class="confirm-body" id="confirmBody"></div>
-      <div class="confirm-ref" id="confirmRef"></div>
-      <button class="confirm-close" onclick="closeModal()">Back to catalog</button>
+      <div class="added-title">Added to cart!</div>
+      <div class="added-body" id="addedBody"></div>
+      <div class="added-actions">
+        <button class="added-continue" onclick="closeModal()">Keep browsing</button>
+        <button class="added-viewcart" onclick="closeModal();openCart()">View cart</button>
+      </div>
     </div>
   </div>
 </div>
 
+<!-- CART DRAWER -->
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+<div class="cart-drawer" id="cartDrawer">
+  <div class="cart-drawer-header">
+    <div class="cart-drawer-title">Your cart</div>
+    <button class="close-btn" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-drawer-body" id="cartBody"></div>
+  <div class="cart-drawer-footer" id="cartFooter" style="display:none">
+    <div class="cart-info-label">Your information</div>
+    <div class="cart-info-section">
+      <div class="cart-info-row">
+        <div>
+          <div class="cart-info-label">Full name *</div>
+          <input class="cart-info-input" type="text" id="cname" placeholder="Jane Smith">
+        </div>
+        <div>
+          <div class="cart-info-label">Email *</div>
+          <input class="cart-info-input" type="email" id="cemail" placeholder="jsmith@university.edu">
+        </div>
+      </div>
+      <div class="cart-info-row">
+        <div>
+          <div class="cart-info-label">Department *</div>
+          <input class="cart-info-input" type="text" id="cdept" placeholder="e.g. Engineering">
+        </div>
+        <div>
+          <div class="cart-info-label">Phone (optional)</div>
+          <input class="cart-info-input" type="tel" id="cphone" placeholder="555-000-1234">
+        </div>
+      </div>
+    </div>
+    <div class="cart-total">
+      <div>
+        Est. total
+        <div class="cart-total-note">Final price confirmed at bookstore</div>
+      </div>
+      <div id="cartTotal">$0</div>
+    </div>
+    <button class="submit-all-btn" id="submitAllBtn" onclick="submitAll()">Submit all requests →</button>
+  </div>
+</div>
+
 <script>
-// ── CONFIGURATION ───────────────────────────────────────────────────
+// ── CONFIG ──────────────────────────────────────────────────────────
 const CATALOG_CSV = "https://docs.google.com/spreadsheets/d/1TrXu2AxiIOXjHAnccFb2NVdx9EQlMNTVUvfCXl00jmo/gviz/tq?tqx=out:csv&sheet=Catalog%20Information";
-const FORM_BASE = "https://docs.google.com/forms/d/e/1FAIpQLSd6zRou_TG4e1g4NCDMVR_5fd3GjBYs3SocgbeE_52pyqzxEw/viewform";
-// Field entry IDs mapped to form fields:
-// entry.2063443297 = Full Name
-// entry.2045502891 = Email
-// entry.1211389596 = Department
-// entry.649660626  = Phone
-// entry.1149247074 = Item
-// entry.351137844  = Size
-// entry.1594216950 = Color
-// entry.1332801338 = Logo / Design
-// entry.682453688  = Custom Text
-// entry.218563050  = Quantity
-// entry.1728681119 = Special Instructions
-// entry.415477768  = Placement
-// entry.2067392112 = Estimated Price
+const FORM_BASE   = "https://docs.google.com/forms/d/e/1FAIpQLSd6zRou_TG4e1g4NCDMVR_5fd3GjBYs3SocgbeE_52pyqzxEw/viewform";
+// entry IDs: Full Name=2063443297, Email=2045502891, Dept=1211389596, Phone=649660626
+// Item=1149247074, Size=351137844, Color=1594216950, Logo=1332801338
+// CustomText=682453688, Qty=218563050, Placement=415477768, Notes=1728681119, EstPrice=2067392112
 // ───────────────────────────────────────────────────────────────────
 
-const PLACEHOLDER_SVG = `<svg class="placeholder" width="52" height="52" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 3.75H14M10 3.75a2.25 2.25 0 01-4.5 0M10 3.75H8.25a2.25 2.25 0 00-2.25 2.25v0M14 3.75a2.25 2.25 0 004.5 0M14 3.75H15.75A2.25 2.25 0 0118 6v0"/></svg>`;
+const PLACEHOLDER_SVG = `<svg class="placeholder" width="40" height="40" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.2"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 3.75H14M10 3.75a2.25 2.25 0 01-4.5 0M10 3.75H8.25a2.25 2.25 0 00-2.25 2.25v0M14 3.75a2.25 2.25 0 004.5 0M14 3.75H15.75A2.25 2.25 0 0118 6v0"/></svg>`;
 
 let products = [];
 let currentProduct = null;
 let sortMode = 'default';
+let cart = []; // array of item objects
 
-// ── LOAD FROM SHEET ─────────────────────────────────────────────────
+// ── LOAD PRODUCTS ────────────────────────────────────────────────────
 async function loadProducts() {
-  const url = CATALOG_CSV;
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+    const res = await fetch(CATALOG_CSV);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const csv = await res.text();
-    if (!csv || csv.trim().startsWith('<')) throw new Error('Sheet returned HTML instead of CSV — make sure the Sheet is shared as "Anyone with the link can view"');
+    if (!csv || csv.trim().startsWith('<')) throw new Error('Sheet returned HTML — make sure it is shared as "Anyone with the link can view"');
     const rows = parseCSV(csv);
-    if (rows.length < 2) {
-      showState('Your catalog sheet is empty. Add items in Google Sheets and refresh.');
-      return;
-    }
-    const headers = rows[0].map(h => h.trim().toLowerCase());
-    const iItem       = headers.indexOf('item');
-    const iSize       = headers.indexOf('size options');
-    const iColor      = headers.indexOf('color options');
-    const iCost       = headers.indexOf('cost');
-    const iPhoto      = headers.indexOf('photo url');
-    const iColorImgs  = headers.indexOf('color images');
-    const iLogoOpts   = headers.indexOf('logo options');
-    const iLogoImgs   = headers.indexOf('logo images');
-    const iPlacement  = headers.indexOf('placement options');
+    if (rows.length < 2) { showState('Catalog sheet is empty. Add items in Google Sheets and refresh.'); return; }
 
-    products = rows.slice(1)
-      .filter(r => r[iItem] && r[iItem].trim())
-      .map((r, i) => ({
-        id: i,
-        name:        r[iItem]      ? r[iItem].trim()  : '',
-        sizes:       r[iSize]      ? r[iSize].trim().split(',').map(s=>s.trim()) : [],
-        colors:      r[iColor]     ? r[iColor].trim().split(',').map(c=>c.trim()).filter(Boolean) : [],
-        cost:        r[iCost]      ? parseFloat(r[iCost].replace(/[^0-9.]/g,'')) || 0 : 0,
-        photo:       r[iPhoto]     ? r[iPhoto].trim() : '',
-        colorImages: iColorImgs >= 0 && r[iColorImgs] ? r[iColorImgs].trim().split(',').map(u=>u.trim()) : [],
-        logoOptions: iLogoOpts >= 0 && r[iLogoOpts]  ? r[iLogoOpts].trim().split(',').map(l=>l.trim()).filter(Boolean) : ['University Seal','Athletic Logo','Custom Text'],
-        logoImages:       iLogoImgs  >= 0 && r[iLogoImgs]  ? r[iLogoImgs].trim().split(',').map(u=>u.trim()) : [],
-        placementOptions: iPlacement >= 0 && r[iPlacement] ? r[iPlacement].trim().split(',').map(p=>p.trim()).filter(Boolean) : ['Left Chest','Right Chest','Center Chest','Back Yoke','Left Sleeve','Right Sleeve','Front Center (Hat)','Side (Hat)'],
-      }));
+    const h = rows[0].map(x => x.trim().toLowerCase());
+    const col = k => h.indexOf(k);
 
-    if (!products.length) {
-      showState('No items found. Fill in the Item column in your Google Sheet and refresh.');
-      return;
-    }
-    buildCategoryFilters();
+    products = rows.slice(1).filter(r => r[col('item')] && r[col('item')].trim()).map((r, i) => ({
+      id: i,
+      name:             r[col('item')].trim(),
+      sizes:            r[col('size options')]      ? r[col('size options')].split(',').map(s=>s.trim()).filter(Boolean) : [],
+      colors:           r[col('color options')]     ? r[col('color options')].split(',').map(c=>c.trim()).filter(Boolean) : [],
+      cost:             r[col('cost')]              ? parseFloat(r[col('cost')].replace(/[^0-9.]/g,'')) || 0 : 0,
+      photo:            r[col('photo url')]         ? r[col('photo url')].trim() : '',
+      colorImages:      r[col('color images')]      ? r[col('color images')].split(',').map(u=>u.trim()) : [],
+      logoOptions:      r[col('logo options')]      ? r[col('logo options')].split(',').map(l=>l.trim()).filter(Boolean) : ['University Seal','Athletic Logo','Custom Text'],
+      logoImages:       r[col('logo images')]       ? r[col('logo images')].split(',').map(u=>u.trim()) : [],
+      placementOptions: r[col('placement options')] ? r[col('placement options')].split(',').map(p=>p.trim()).filter(Boolean) : ['Left Chest','Right Chest','Center Chest','Back Yoke','Left Sleeve','Right Sleeve','Front Center (Hat)','Side (Hat)'],
+    }));
+
+    if (!products.length) { showState('No items found. Fill in the Item column in your Sheet.'); return; }
+    document.getElementById('categoryFilters').innerHTML = `<span style="font-size:13px;color:var(--muted)">${products.length} item${products.length!==1?'s':''} in catalog</span>`;
     renderGrid();
   } catch(e) {
     showState(`Error: ${e.message}`, true);
-    console.error(e);
   }
 }
 
 function parseCSV(text) {
-  const rows = [];
-  let row = [], cur = '', inQ = false;
+  const rows = []; let row = [], cur = '', inQ = false;
   for (let i = 0; i < text.length; i++) {
     const c = text[i];
     if (c === '"') { if (inQ && text[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
     else if (c === ',' && !inQ) { row.push(cur); cur = ''; }
-    else if ((c === '\n' || c === '\r') && !inQ) {
-      if (c === '\r' && text[i+1] === '\n') i++;
-      row.push(cur); rows.push(row); row = []; cur = '';
-    } else cur += c;
+    else if ((c === '\n' || c === '\r') && !inQ) { if (c==='\r'&&text[i+1]==='\n') i++; row.push(cur); rows.push(row); row=[]; cur=''; }
+    else cur += c;
   }
-  if (cur || row.length) { row.push(cur); rows.push(row); }
+  if (cur||row.length) { row.push(cur); rows.push(row); }
   return rows;
 }
 
-function showState(msg, isError) {
-  document.getElementById('productGrid').innerHTML =
-    `<div class="state-msg${isError?' error':''}">${msg}</div>`;
+function showState(msg, err) {
+  document.getElementById('productGrid').innerHTML = `<div class="state-msg${err?' error':''}">${msg}</div>`;
 }
 
 function driveUrl(url) {
   if (!url) return '';
   const m = url.match(/[-\w]{25,}/);
-  if (!m) return url;
-  const id = m[0];
-  // Use thumbnail endpoint which is reliably embeddable
-  return `https://drive.google.com/thumbnail?id=${id}&sz=w400`;
+  return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w400` : url;
 }
 
-function buildCategoryFilters() {
-  // Since the sheet doesn't have a category column, just show a count
-  const el = document.getElementById('categoryFilters');
-  el.innerHTML = `<label style="font-size:13px;color:var(--muted)">${products.length} item${products.length!==1?'s':''} in catalog</label>`;
-}
-
-// ── RENDER ──────────────────────────────────────────────────────────
+// ── RENDER GRID ──────────────────────────────────────────────────────
 function renderGrid() {
   const search = document.getElementById('searchInput').value.toLowerCase();
-  let filtered = products.filter(p => p.name.toLowerCase().includes(search));
-  if (sortMode === 'low')  filtered.sort((a,b) => a.cost - b.cost);
-  if (sortMode === 'high') filtered.sort((a,b) => b.cost - a.cost);
-
-  if (!filtered.length) { showState('No items match your search.'); return; }
-
-  document.getElementById('productGrid').innerHTML = filtered.map(p => `
+  let list = products.filter(p => p.name.toLowerCase().includes(search));
+  if (sortMode==='low') list.sort((a,b)=>a.cost-b.cost);
+  if (sortMode==='high') list.sort((a,b)=>b.cost-a.cost);
+  if (!list.length) { showState('No items match your search.'); return; }
+  document.getElementById('productGrid').innerHTML = list.map(p => `
     <div class="card" onclick="openModal(${p.id})">
       <div class="card-img">
-        ${p.photo
-          ? `<img src="${driveUrl(p.photo)}" alt="${p.name}" onerror="this.parentNode.innerHTML='${PLACEHOLDER_SVG.replace(/"/g,"'")}'">`
-          : PLACEHOLDER_SVG}
+        ${p.photo ? `<img src="${driveUrl(p.photo)}" alt="${p.name}" onerror="this.parentNode.innerHTML='${PLACEHOLDER_SVG.replace(/"/g,"'")}'" >` : PLACEHOLDER_SVG}
       </div>
       <div class="card-body">
         <div class="card-name">${p.name}</div>
-        <div class="card-sub">${[p.colors.length ? p.colors.length+' colors' : '', p.sizes.length ? p.sizes.join(' · ') : 'One size'].filter(Boolean).join(' · ')}</div>
+        <div class="card-sub">${[p.colors.length?p.colors.length+' colors':'', p.sizes.length?p.sizes.join(' · '):'One size'].filter(Boolean).join(' · ')}</div>
         <div class="card-footer">
-          <div>
-            <div class="est-label">Est. from</div>
-            <div class="est-price">${p.cost ? '$'+p.cost : 'Ask us'}</div>
-          </div>
-          <button class="card-btn">Request →</button>
+          <div><div class="est-label">Est. from</div><div class="est-price">${p.cost?'$'+p.cost:'Ask us'}</div></div>
+          <button class="card-btn">Select →</button>
         </div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
 function setSort(mode, btn) {
   sortMode = mode;
-  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.sort-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
   renderGrid();
 }
 
-// ── MODAL ────────────────────────────────────────────────────────────
+// ── ITEM MODAL ───────────────────────────────────────────────────────
 function openModal(id) {
-  currentProduct = products.find(p => p.id === id);
+  currentProduct = products.find(p=>p.id===id);
   document.getElementById('modalTitle').textContent = currentProduct.name;
-  document.getElementById('modalSub').textContent =
-    `Est. from ${currentProduct.cost ? '$'+currentProduct.cost : 'price TBD'} · payment collected at the bookstore`;
+  document.getElementById('modalSub').textContent = `Est. from ${currentProduct.cost?'$'+currentProduct.cost:'TBD'} · payment collected at the bookstore`;
 
-  // Color swatches
+  // Colors
   const colorGrp = document.getElementById('colorGroup');
-  if (currentProduct.colors.length) {
-    colorGrp.style.display = '';
-    buildColorSwatches(0);
-  } else {
-    colorGrp.style.display = 'none';
-    document.getElementById('fcolor').value = 'N/A';
-  }
+  if (currentProduct.colors.length) { colorGrp.style.display=''; buildColorSwatches(0); }
+  else { colorGrp.style.display='none'; document.getElementById('fcolor').value='N/A'; }
 
-  // Size select
-  const sizeSel = document.getElementById('fsize');
+  // Sizes
   const sizeGrp = document.getElementById('sizeGroup');
   if (currentProduct.sizes.length) {
-    sizeSel.innerHTML = currentProduct.sizes.map(s=>`<option>${s}</option>`).join('');
-    sizeGrp.style.display = '';
-  } else {
-    sizeGrp.style.display = 'none';
-  }
+    document.getElementById('fsize').innerHTML = currentProduct.sizes.map(s=>`<option>${s}</option>`).join('');
+    sizeGrp.style.display='';
+  } else { sizeGrp.style.display='none'; }
 
-  // Build logo options
+  // Logos
   buildLogoOptions(0);
 
-  // Build placement options
-  buildPlacementOptions();
+  // Placement
+  document.getElementById('fplacement').innerHTML =
+    '<option value="">-- Select placement --</option>' +
+    currentProduct.placementOptions.map(p=>`<option>${p}</option>`).join('');
 
-  // Reset fields
-  ['fname','femail','fdept','fphone','fnotes','fcustomtext'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('fqty').value = 1;
-  // custom text always visible
+  // Reset
+  ['fcustomtext','fnotes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('fqty').value=1;
   updatePrice();
 
-  document.getElementById('formView').style.display = '';
-  document.getElementById('confirmView').classList.remove('show');
+  document.getElementById('formView').style.display='';
+  document.getElementById('addedView').classList.remove('show');
   document.getElementById('overlay').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-function buildColorSwatches(selectedIdx) {
-  const colors = currentProduct.colors;
-  const colorImages = currentProduct.colorImages || [];
-  const container = document.getElementById('colorSwatches');
-
-  container.innerHTML = colors.map((c, i) => {
-    const imgUrl = colorImages[i] ? driveUrl(colorImages[i]) : '';
-    const thumbContent = imgUrl
-      ? `<img class="color-thumb" src="${imgUrl}" alt="${c}" onerror="this.style.display='none'">`
-      : `<span style="font-size:9px;font-weight:600;color:var(--muted)">${c.slice(0,2).toUpperCase()}</span>`;
-    return `<button class="color-swatch-btn${i===selectedIdx?' selected':''}" onclick="selectColor(${i})" title="${c}">
-      <div class="color-swatch-circle">${thumbContent}</div>
-      <span class="color-swatch-label">${c}</span>
-    </button>`;
-  }).join('');
-
-  // Set hidden input
-  document.getElementById('fcolor').value = colors[selectedIdx] || '';
-
-  // Update preview image
-  const previewImg = document.getElementById('colorPreviewImg');
-  const previewPlaceholder = document.getElementById('colorPreviewPlaceholder');
-  const imgUrl = colorImages[selectedIdx] ? driveUrl(colorImages[selectedIdx]) : (currentProduct.photo ? driveUrl(currentProduct.photo) : '');
-  if (imgUrl) {
-    previewImg.src = imgUrl;
-    previewImg.style.display = 'block';
-    previewPlaceholder.style.display = 'none';
-  } else {
-    previewImg.style.display = 'none';
-    previewPlaceholder.style.display = 'flex';
-  }
-}
-
-function selectColor(i) {
-  buildColorSwatches(i);
-}
-
-function buildLogoOptions(selectedIdx) {
-  const logos = currentProduct.logoOptions || [];
-  const logoImgs = currentProduct.logoImages || [];
-  const container = document.getElementById('logoOptionBtns');
-
-  container.innerHTML = logos.map((l, i) =>
-    `<button class="logo-option-btn${i===selectedIdx?' selected':''}" onclick="selectLogo(${i})">${l}</button>`
-  ).join('');
-
-  // Set hidden input
-  document.getElementById('flogo').value = logos[selectedIdx] || '';
-
-  // Show/hide custom text
-  toggleCustomText();
-
-  // Update logo preview image
-  const previewImg = document.getElementById('logoPreviewImg');
-  const previewPlaceholder = document.getElementById('logoPreviewPlaceholder');
-  const imgUrl = logoImgs[selectedIdx] ? driveUrl(logoImgs[selectedIdx]) : '';
-  if (imgUrl) {
-    previewImg.src = imgUrl;
-    previewImg.style.display = 'block';
-    previewPlaceholder.style.display = 'none';
-  } else {
-    previewImg.style.display = 'none';
-    previewPlaceholder.style.display = 'flex';
-  }
-}
-
-function selectLogo(i) {
-  buildLogoOptions(i);
-}
-
-function buildPlacementOptions() {
-  const placements = currentProduct.placementOptions || [];
-  const sel = document.getElementById('fplacement');
-  sel.innerHTML = '<option value="">-- Select placement --</option>' +
-    placements.map(p => `<option>${p}</option>`).join('');
+  document.body.style.overflow='hidden';
 }
 
 function closeModal() {
   document.getElementById('overlay').classList.remove('open');
-  document.body.style.overflow = '';
+  document.body.style.overflow='';
 }
 
 function handleOverlayClick(e) {
-  if (e.target === document.getElementById('overlay')) closeModal();
+  if (e.target===document.getElementById('overlay')) closeModal();
 }
 
-function toggleCustomText() {
-  // Custom text is always visible — no toggle needed
+function buildColorSwatches(selectedIdx) {
+  const colors = currentProduct.colors;
+  const imgs = currentProduct.colorImages || [];
+  document.getElementById('colorSwatches').innerHTML = colors.map((c,i) => {
+    const thumbUrl = imgs[i] ? driveUrl(imgs[i]) : '';
+    const inner = thumbUrl
+      ? `<img class="color-thumb" src="${thumbUrl}" alt="${c}" onerror="this.style.display='none'">`
+      : `<span>${c.slice(0,2).toUpperCase()}</span>`;
+    return `<button class="color-swatch-btn${i===selectedIdx?' selected':''}" onclick="selectColor(${i})">
+      <div class="color-swatch-circle">${inner}</div>
+      <span class="color-swatch-label">${c}</span>
+    </button>`;
+  }).join('');
+  document.getElementById('fcolor').value = colors[selectedIdx]||'';
+  const previewImg = document.getElementById('colorPreviewImg');
+  const placeholder = document.getElementById('colorPreviewPlaceholder');
+  const imgUrl = imgs[selectedIdx] ? driveUrl(imgs[selectedIdx]) : (currentProduct.photo ? driveUrl(currentProduct.photo) : '');
+  if (imgUrl) { previewImg.src=imgUrl; previewImg.style.display='block'; placeholder.style.display='none'; }
+  else { previewImg.style.display='none'; placeholder.style.display='flex'; }
 }
+
+function selectColor(i) { buildColorSwatches(i); }
+
+function buildLogoOptions(selectedIdx) {
+  const logos = currentProduct.logoOptions || [];
+  const imgs = currentProduct.logoImages || [];
+  document.getElementById('logoOptionBtns').innerHTML = logos.map((l,i) =>
+    `<button class="logo-option-btn${i===selectedIdx?' selected':''}" onclick="selectLogo(${i})">${l}</button>`
+  ).join('');
+  document.getElementById('flogo').value = logos[selectedIdx]||'';
+  const previewImg = document.getElementById('logoPreviewImg');
+  const placeholder = document.getElementById('logoPreviewPlaceholder');
+  const imgUrl = imgs[selectedIdx] ? driveUrl(imgs[selectedIdx]) : '';
+  if (imgUrl) { previewImg.src=imgUrl; previewImg.style.display='block'; placeholder.style.display='none'; }
+  else { previewImg.style.display='none'; placeholder.style.display='flex'; }
+}
+
+function selectLogo(i) { buildLogoOptions(i); }
 
 function updatePrice() {
   const qty = Math.max(1, parseInt(document.getElementById('fqty').value)||1);
-  const est = currentProduct && currentProduct.cost ? '$'+(currentProduct.cost * qty) : 'TBD';
+  const est = currentProduct && currentProduct.cost ? '$'+(currentProduct.cost*qty) : 'TBD';
   document.getElementById('priceDisplay').textContent = '~'+est;
 }
 
-// ── SUBMIT ───────────────────────────────────────────────────────────
-function submitRequest() {
-  const name  = document.getElementById('fname').value.trim();
-  const email = document.getElementById('femail').value.trim();
-  const dept  = document.getElementById('fdept').value.trim();
-  if (!name || !email || !dept) { alert('Please fill in your name, email, and department.'); return; }
-  const logo = document.getElementById('flogo').value;
+// ── CART ─────────────────────────────────────────────────────────────
+function addToCart() {
+  const qty = Math.max(1, parseInt(document.getElementById('fqty').value)||1);
+  const sizeGrp = document.getElementById('sizeGroup');
+  const item = {
+    id:        Date.now(),
+    productId: currentProduct.id,
+    name:      currentProduct.name,
+    photo:     currentProduct.photo,
+    cost:      currentProduct.cost,
+    size:      sizeGrp.style.display!=='none' ? document.getElementById('fsize').value : 'N/A',
+    color:     document.getElementById('fcolor').value || 'N/A',
+    logo:      document.getElementById('flogo').value,
+    customText:document.getElementById('fcustomtext').value.trim(),
+    placement: document.getElementById('fplacement').value,
+    notes:     document.getElementById('fnotes').value.trim(),
+    qty,
+    est:       currentProduct.cost ? '~$'+(currentProduct.cost*qty) : 'TBD',
+  };
+  cart.push(item);
+  updateCartBadge();
 
-  const qty     = document.getElementById('fqty').value;
-  const sizeEl  = document.getElementById('sizeGroup');
-  const size    = sizeEl.style.display !== 'none' ? document.getElementById('fsize').value : 'N/A';
-  const color   = document.getElementById('fcolor').value || 'N/A';
-  const custom  = document.getElementById('fcustomtext').value.trim();
-  const notes     = document.getElementById('fnotes').value.trim();
-  const placement = document.getElementById('fplacement').value;
-  const phone   = document.getElementById('fphone').value.trim();
-  const est     = currentProduct.cost ? '~$' + (currentProduct.cost * parseInt(qty)) : 'TBD';
+  document.getElementById('addedBody').textContent = `${item.name} (${item.color}, ${item.size === 'N/A' ? '' : 'Size '+item.size+', '}Qty ${item.qty}) has been added to your cart.`;
+  document.getElementById('formView').style.display='none';
+  document.getElementById('addedView').classList.add('show');
+}
 
-  // Build pre-filled Google Form URL
-  const params = new URLSearchParams({
-    'entry.2063443297': name,
-    'entry.2045502891': email,
-    'entry.1211389596': dept,
-    'entry.649660626':  phone,
-    'entry.1149247074': currentProduct.name,
-    'entry.351137844':  size,
-    'entry.1594216950': color,
-    'entry.1332801338': logo,
-    'entry.682453688':  custom,
-    'entry.218563050':  qty,
-    'entry.415477768':  placement,
-    'entry.1728681119': notes,
-    'entry.2067392112': est,
+function updateCartBadge() {
+  const total = cart.reduce((s,i)=>s+i.qty, 0);
+  document.getElementById('cartBadge').textContent = total;
+}
+
+function openCart() {
+  renderCart();
+  document.getElementById('cartOverlay').classList.add('open');
+  document.getElementById('cartDrawer').classList.add('open');
+  document.body.style.overflow='hidden';
+}
+
+function closeCart() {
+  document.getElementById('cartOverlay').classList.remove('open');
+  document.getElementById('cartDrawer').classList.remove('open');
+  document.body.style.overflow='';
+}
+
+function removeFromCart(id) {
+  cart = cart.filter(i=>i.id!==id);
+  updateCartBadge();
+  renderCart();
+}
+
+function renderCart() {
+  const body = document.getElementById('cartBody');
+  const footer = document.getElementById('cartFooter');
+  if (!cart.length) {
+    body.innerHTML = '<div class="cart-empty">Your cart is empty.<br>Browse the catalog and add items!</div>';
+    footer.style.display='none';
+    return;
+  }
+  footer.style.display='flex';
+  footer.style.flexDirection='column';
+  footer.style.gap='10px';
+
+  body.innerHTML = cart.map(item => {
+    const imgUrl = item.photo ? driveUrl(item.photo) : '';
+    const imgHtml = imgUrl
+      ? `<img class="cart-item-img" src="${imgUrl}" alt="${item.name}" onerror="this.outerHTML='<div class=cart-item-img-placeholder>${PLACEHOLDER_SVG.replace(/"/g,"'")}</div>'">`
+      : `<div class="cart-item-img-placeholder">${PLACEHOLDER_SVG}</div>`;
+    const details = [
+      item.color !== 'N/A' ? item.color : '',
+      item.size  !== 'N/A' ? 'Size: '+item.size : '',
+      item.logo  ? item.logo : '',
+      item.customText ? '"'+item.customText+'"' : '',
+      item.placement  ? item.placement : '',
+      'Qty: '+item.qty,
+    ].filter(Boolean).join(' · ');
+    return `<div class="cart-item">
+      ${imgHtml}
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.name}</div>
+        <div class="cart-item-detail">${details}</div>
+        ${item.notes ? `<div class="cart-item-detail" style="margin-top:2px;font-style:italic">${item.notes}</div>` : ''}
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+        <div class="cart-item-price">${item.est}</div>
+        <button class="cart-item-remove" onclick="removeFromCart(${item.id})" title="Remove">✕</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Total
+  const total = cart.reduce((s,i) => s + (i.cost ? i.cost*i.qty : 0), 0);
+  document.getElementById('cartTotal').textContent = total ? '~$'+total : 'TBD';
+}
+
+// ── SUBMIT ALL ───────────────────────────────────────────────────────
+function submitAll() {
+  const name  = document.getElementById('cname').value.trim();
+  const email = document.getElementById('cemail').value.trim();
+  const dept  = document.getElementById('cdept').value.trim();
+  if (!name || !email || !dept) { alert('Please fill in your name, email, and department before submitting.'); return; }
+
+  const phone = document.getElementById('cphone').value.trim();
+
+  const btn = document.getElementById('submitAllBtn');
+  btn.disabled = true;
+  btn.textContent = `Opening ${cart.length} form${cart.length>1?'s':''}…`;
+
+  // Open one pre-filled Google Form per cart item
+  cart.forEach((item, idx) => {
+    setTimeout(() => {
+      const params = new URLSearchParams({
+        'entry.2063443297': name,
+        'entry.2045502891': email,
+        'entry.1211389596': dept,
+        'entry.649660626':  phone,
+        'entry.1149247074': item.name,
+        'entry.351137844':  item.size,
+        'entry.1594216950': item.color,
+        'entry.1332801338': item.logo,
+        'entry.682453688':  item.customText,
+        'entry.218563050':  item.qty,
+        'entry.415477768':  item.placement,
+        'entry.1728681119': item.notes,
+        'entry.2067392112': item.est,
+      });
+      window.open(FORM_BASE + '?' + params.toString(), '_blank');
+    }, idx * 800); // stagger 800ms apart so browser doesn't block popups
   });
 
-  // Open the pre-filled form in a new tab
-  window.open(FORM_BASE + '?' + params.toString(), '_blank');
-
-  // Show confirmation in catalog
-  document.getElementById('confirmBody').innerHTML =
-    `Thanks, ${name.split(' ')[0]}! A pre-filled form has opened in a new tab — just hit Submit there and the bookstore will contact you at <strong>${email}</strong> when your order is ready.`;
-  document.getElementById('confirmRef').textContent = `Est. ready in 7–10 business days after form submission`;
-  document.getElementById('formView').style.display = 'none';
-  document.getElementById('confirmView').classList.add('show');
+  setTimeout(() => {
+    cart = [];
+    updateCartBadge();
+    btn.disabled = false;
+    btn.textContent = 'Submit all requests →';
+    closeCart();
+    // Clear info fields
+    ['cname','cemail','cdept','cphone'].forEach(id=>document.getElementById(id).value='');
+  }, cart.length * 800 + 200);
 }
 
 loadProducts();
 </script>
-
-<!--
-════════════════════════════════════════════════════════════════════════
-  APPS SCRIPT — paste into Extensions → Apps Script in your Google Sheet
-  Then: Deploy → New deployment → Web App → Anyone → Deploy
-  Copy the URL and paste it into SUBMIT_URL above.
-════════════════════════════════════════════════════════════════════════
-
-function doPost(e) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
-  var sheet = ss.getSheetByName('Orders') || ss.insertSheet('Orders');
-  var data = JSON.parse(e.postData.contents);
-
-  if (sheet.getLastRow() === 0) {
-    sheet.appendRow(['Timestamp','Name','Email','Department','Phone',
-      'Item','Size','Color','Logo / Design','Custom Text',
-      'Qty','Notes','Est. Price','Ref #','Status']);
-  }
-
-  sheet.appendRow([
-    data.timestamp, data.name, data.email, data.department, data.phone,
-    data.item, data.size, data.color, data.logo, data.customText,
-    data.qty, data.notes, data.estPrice, data.ref, 'New'
-  ]);
-
-  return ContentService
-    .createTextOutput(JSON.stringify({status:'ok'}))
-    .setMimeType(ContentService.MimeType.JSON);
-}
-
-════════════════════════════════════════════════════════════════════════
--->
 </body>
 </html>
