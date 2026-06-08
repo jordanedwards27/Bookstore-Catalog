@@ -367,7 +367,7 @@
 
 <script>
 // ── CONFIG ──────────────────────────────────────────────────────────
-const CATALOG_JSON = "https://docs.google.com/spreadsheets/d/1TrXu2AxiIOXjHAnccFb2NVdx9EQlMNTVUvfCXl00jmo/gviz/tq?tqx=out:json&sheet=Catalog%20Information";
+const CATALOG_CSV = "https://docs.google.com/spreadsheets/d/1TrXu2AxiIOXjHAnccFb2NVdx9EQlMNTVUvfCXl00jmo/gviz/tq?tqx=out:json&sheet=Catalog%20Information";
 const SUBMIT_URL  = "https://script.google.com/macros/s/AKfycbxSKvjh9zyADWKbwp7sT1w5-S7ayLfcSDY621M9NMU64DOWCArXN1wO-A3zM0Wctngs/exec";
 // entry IDs: Full Name=2063443297, Email=2045502891, Dept=1211389596, Phone=649660626
 // Item=1149247074, Size=351137844, Color=1594216950, Logo=1332801338
@@ -388,30 +388,18 @@ let activeSize = '';
 // ── LOAD PRODUCTS ────────────────────────────────────────────────────
 async function loadProducts() {
   try {
-    const res = await fetch(CATALOG_JSON);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    let text = await res.text();
-    // Strip the google.visualization.Query.setResponse( wrapper
-    text = text.replace(/^.*?\(/, '').replace(/\);?\s*$/, '');
-    const json = JSON.parse(text);
-    const table = json.table;
-    if (!table || !table.rows || !table.rows.length) {
+    const res = await fetch(SUBMIT_URL + '?action=getCatalog');
+    const json = await res.json();
+    if (!json.rows || !json.rows.length) {
       showState('Catalog sheet is empty. Add items in Google Sheets and refresh.');
       return;
     }
-
-    // Build header map from column labels
-    const headers = table.cols.map(c => (c.label || '').trim().toLowerCase());
+    const headers = json.headers.map(h => h.trim().toLowerCase());
     const col = k => headers.indexOf(k);
+    const getVal = (row, k) => { const i = col(k); return i >= 0 && row[i] ? String(row[i]).trim() : ''; };
 
-    const getVal = (row, k) => {
-      const i = col(k);
-      if (i < 0 || !row.c[i]) return '';
-      return row.c[i].v !== null && row.c[i].v !== undefined ? String(row.c[i].v).trim() : '';
-    };
-
-    products = table.rows
-      .filter(row => row.c && getVal(row, 'item'))
+    products = json.rows
+      .filter(row => getVal(row, 'item'))
       .map((row, i) => ({
         id:               i,
         name:             getVal(row, 'item'),
@@ -422,7 +410,7 @@ async function loadProducts() {
         cost:             parseFloat(getVal(row, 'cost').replace(/[^0-9.]/g,'')) || 0,
         photo:            getVal(row, 'photo url'),
         colorImages:      getVal(row, 'color images').split(',').map(u=>u.trim()).filter(Boolean),
-        logoOptions:      getVal(row, 'logo options').split(',').map(l=>l.trim()).filter(Boolean) || ['University Seal','Athletic Logo','Custom Text'],
+        logoOptions:      getVal(row, 'logo options').split(',').map(l=>l.trim()).filter(Boolean),
         logoImages:       getVal(row, 'logo images').split(',').map(u=>u.trim()).filter(Boolean),
         placementOptions: getVal(row, 'placement options').split(',').map(p=>p.trim()).filter(Boolean),
       }));

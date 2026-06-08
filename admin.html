@@ -301,7 +301,7 @@
 // ── CONFIG ───────────────────────────────────────────────────────────
 const SHEET_ID   = '1TrXu2AxiIOXjHAnccFb2NVdx9EQlMNTVUvfCXl00jmo';
 const SHEET_NAME = 'Catalog Information';
-const CATALOG_JSON = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&sheet=${encodeURIComponent(SHEET_NAME)}`;
+const CATALOG_CSV = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(SHEET_NAME)}`;
 
 // ── NOTE: To enable saving, deploy Apps Script (see bottom of file) ──
 const ADMIN_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxSKvjh9zyADWKbwp7sT1w5-S7ayLfcSDY621M9NMU64DOWCArXN1wO-A3zM0Wctngs/exec';
@@ -344,26 +344,18 @@ if (sessionStorage.getItem('admin_auth') === '1') {
 async function loadItems() {
   document.getElementById('itemsBody').innerHTML = '<tr class="loading-row"><td colspan="8">Loading items…</td></tr>';
   try {
-    const res = await fetch(CATALOG_JSON);
-    let text = await res.text();
-    text = text.replace(/^.*?\(/, '').replace(/\);?\s*$/, '');
-    const json = JSON.parse(text);
-    const table = json.table;
-    if (!table || !table.rows || !table.rows.length) {
+    const res = await fetch(ADMIN_SCRIPT_URL + '?action=getCatalog');
+    const json = await res.json();
+    if (!json.rows || !json.rows.length) {
       document.getElementById('itemsBody').innerHTML = '<tr class="loading-row"><td colspan="8">No items found.</td></tr>';
       return;
     }
-
-    const headers = table.cols.map(c => (c.label || '').trim().toLowerCase());
+    const headers = json.headers.map(h => h.trim().toLowerCase());
     const col = k => headers.indexOf(k);
-    const getVal = (row, k) => {
-      const i = col(k);
-      if (i < 0 || !row.c[i]) return '';
-      return row.c[i].v !== null && row.c[i].v !== undefined ? String(row.c[i].v).trim() : '';
-    };
+    const getVal = (row, k) => { const i = col(k); return i >= 0 && row[i] ? String(row[i]).trim() : ''; };
 
-    products = table.rows
-      .filter(row => row.c && getVal(row, 'item'))
+    products = json.rows
+      .filter(row => getVal(row, 'item'))
       .map((row, i) => ({
         rowIdx:     i + 2,
         name:       getVal(row, 'item'),
@@ -378,7 +370,6 @@ async function loadItems() {
         logoImgs:   getVal(row, 'logo images'),
         placements: getVal(row, 'placement options'),
       }));
-
     renderTable();
   } catch(e) {
     document.getElementById('itemsBody').innerHTML = `<tr class="loading-row"><td colspan="8" style="color:#b91c1c">Error: ${e.message}</td></tr>`;
