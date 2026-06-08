@@ -345,7 +345,8 @@ async function loadItems() {
   document.getElementById('itemsBody').innerHTML = '<tr class="loading-row"><td colspan="8">Loading items…</td></tr>';
   try {
     const res = await fetch(CATALOG_CSV);
-    const csv = await res.text();
+    const buffer = await res.arrayBuffer();
+    const csv = new TextDecoder('utf-8').decode(buffer);
     if (!csv || csv.trim().startsWith('<')) throw new Error('Could not load sheet');
     const rows = parseCSV(csv);
     const h = rows[0].map(x => x.trim().toLowerCase());
@@ -354,16 +355,16 @@ async function loadItems() {
     products = rows.slice(1).filter(r => r[col('item')] && r[col('item')].trim()).map((r, i) => ({
       rowIdx:    i + 2, // 1-indexed, +1 for header
       name:      r[col('item')]              || '',
-      gender:    r[col('gender')]            || '',
-      type:      r[col('type')]              || '',
-      sizes:     r[col('size options')]      || '',
-      colors:    r[col('color options')]     || '',
-      cost:      r[col('cost')]              || '',
-      photo:     r[col('photo url')]         || '',
-      colorImgs: r[col('color images')]      || '',
-      logoOpts:  r[col('logo options')]      || '',
-      logoImgs:  r[col('logo images')]       || '',
-      placements:r[col('placement options')] || '',
+      gender:    col('gender')      >= 0 ? (r[col('gender')]            || '') : '',
+      type:      col('type')        >= 0 ? (r[col('type')]              || '') : '',
+      sizes:     col('size options')>= 0 ? (r[col('size options')]      || '') : '',
+      colors:    col('color options')>=0 ? (r[col('color options')]     || '') : '',
+      cost:      col('cost')        >= 0 ? (r[col('cost')]              || '') : '',
+      photo:     col('photo url')   >= 0 ? (r[col('photo url')]         || '') : '',
+      colorImgs: col('color images')>= 0 ? (r[col('color images')]      || '') : '',
+      logoOpts:  col('logo options')>= 0 ? (r[col('logo options')]      || '') : '',
+      logoImgs:  col('logo images') >= 0 ? (r[col('logo images')]       || '') : '',
+      placements:col('placement options')>=0?(r[col('placement options')]||'') : '',
     }));
 
     renderTable();
@@ -401,10 +402,10 @@ function renderTable() {
   }
   const search = (document.getElementById('adminSearch')?.value || '').toLowerCase();
   const filtered = products.filter(p =>
-    p.name.toLowerCase().includes(search) ||
-    p.gender.toLowerCase().includes(search) ||
-    p.type.toLowerCase().includes(search) ||
-    p.colors.toLowerCase().includes(search)
+    (p.name   ||'').toLowerCase().includes(search) ||
+    (p.gender ||'').toLowerCase().includes(search) ||
+    (p.type   ||'').toLowerCase().includes(search) ||
+    (p.colors ||'').toLowerCase().includes(search)
   );
   if (!filtered.length) {
     document.getElementById('itemsBody').innerHTML = `<tr class="loading-row"><td colspan="8">No items match "${search}"</td></tr>`;
@@ -537,15 +538,26 @@ function showToast(msg, type='') {
 
 // ── CSV PARSER ────────────────────────────────────────────────────────
 function parseCSV(text) {
-  const rows = []; let row = [], cur = '', inQ = false;
-  for (let i = 0; i < text.length; i++) {
+  const rows = [];
+  let row = [], cur = '', inQ = false, i = 0;
+  // Normalize line endings
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  while (i < text.length) {
     const c = text[i];
-    if (c === '"') { if (inQ && text[i+1]==='"') { cur+='"'; i++; } else inQ=!inQ; }
-    else if (c===',' && !inQ) { row.push(cur); cur=''; }
-    else if ((c==='\n'||c==='\r') && !inQ) { if(c==='\r'&&text[i+1]==='\n')i++; row.push(cur); rows.push(row); row=[]; cur=''; }
-    else cur+=c;
+    if (c === '"') {
+      if (inQ && text[i+1] === '"') { cur += '"'; i += 2; continue; }
+      inQ = !inQ; i++; continue;
+    }
+    if (c === ',' && !inQ) { row.push(cur.trim()); cur = ''; i++; continue; }
+    if (c === '\n' && !inQ) {
+      row.push(cur.trim());
+      // Only add non-empty rows
+      if (row.some(cell => cell.length > 0)) rows.push(row);
+      row = []; cur = ''; i++; continue;
+    }
+    cur += c; i++;
   }
-  if(cur||row.length){row.push(cur);rows.push(row);}
+  if (cur || row.length) { row.push(cur.trim()); if (row.some(c => c.length > 0)) rows.push(row); }
   return rows;
 }
 </script>

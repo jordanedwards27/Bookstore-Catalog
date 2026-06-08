@@ -390,7 +390,8 @@ async function loadProducts() {
   try {
     const res = await fetch(CATALOG_CSV);
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const csv = await res.text();
+    const buffer = await res.arrayBuffer();
+    const csv = new TextDecoder('utf-8').decode(buffer);
     if (!csv || csv.trim().startsWith('<')) throw new Error('Sheet returned HTML — make sure it is shared as "Anyone with the link can view"');
     const rows = parseCSV(csv);
     if (rows.length < 2) { showState('Catalog sheet is empty. Add items in Google Sheets and refresh.'); return; }
@@ -499,15 +500,26 @@ function setSize(val, btn) {
 }
 
 function parseCSV(text) {
-  const rows = []; let row = [], cur = '', inQ = false;
-  for (let i = 0; i < text.length; i++) {
+  const rows = [];
+  let row = [], cur = '', inQ = false, i = 0;
+  // Normalize line endings
+  text = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  while (i < text.length) {
     const c = text[i];
-    if (c === '"') { if (inQ && text[i+1] === '"') { cur += '"'; i++; } else inQ = !inQ; }
-    else if (c === ',' && !inQ) { row.push(cur); cur = ''; }
-    else if ((c === '\n' || c === '\r') && !inQ) { if (c==='\r'&&text[i+1]==='\n') i++; row.push(cur); rows.push(row); row=[]; cur=''; }
-    else cur += c;
+    if (c === '"') {
+      if (inQ && text[i+1] === '"') { cur += '"'; i += 2; continue; }
+      inQ = !inQ; i++; continue;
+    }
+    if (c === ',' && !inQ) { row.push(cur.trim()); cur = ''; i++; continue; }
+    if (c === '\n' && !inQ) {
+      row.push(cur.trim());
+      // Only add non-empty rows
+      if (row.some(cell => cell.length > 0)) rows.push(row);
+      row = []; cur = ''; i++; continue;
+    }
+    cur += c; i++;
   }
-  if (cur||row.length) { row.push(cur); rows.push(row); }
+  if (cur || row.length) { row.push(cur.trim()); if (row.some(c => c.length > 0)) rows.push(row); }
   return rows;
 }
 
