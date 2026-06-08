@@ -24,7 +24,7 @@
     --success-bg: #d8f3dc;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: var(--font-body); background: var(--bg); color: var(--text); min-height: 100vh; }
+  body { font-family: var(--font-body); background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
 
   /* ── LOGIN ── */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
@@ -51,10 +51,10 @@
   .logout-btn:hover { background: #1a1a1a; color: #fff; }
 
   /* ── ADMIN LAYOUT ── */
-  .admin-layout { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: 2rem; min-height: calc(100vh - 70px); }
+  .admin-layout { max-width: 1100px; margin: 0 auto; padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; height: calc(100vh - 70px); overflow: hidden; }
 
   /* ── SECTION ── */
-  .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; height: calc(100vh - 180px); }
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; flex: 1; overflow: hidden; }
   .section-header { padding: 1rem 1.5rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: var(--light); border-radius: var(--radius) var(--radius) 0 0; flex-shrink: 0; }
   .section-title { font-family: var(--font-display); font-size: 1.1rem; font-weight: 700; color: var(--text); }
   .section-body { padding: 1.5rem; }
