@@ -106,6 +106,39 @@
 
   /* ── NOTICE ── */
   .notice { background: #fffbf2; border: 1px solid #e8dfc8; border-radius: 8px; padding: 10px 14px; font-size: 13px; color: var(--muted); display: flex; gap: 8px; align-items: flex-start; }
+
+  /* ── MOBILE ── */
+  @media (max-width: 700px) {
+    header { padding: 0 1rem; height: 60px; }
+    .header-logo img { height: 40px !important; }
+    .header-tag { display: none; }
+    .header-right { gap: 8px; }
+    .admin-layout { padding: 1rem; gap: 1rem; }
+
+    /* Hide less important table columns on mobile */
+    .items-table .hide-mobile { display: none; }
+
+    /* Make table scroll horizontally */
+    .section { overflow-x: auto; }
+    .items-table { min-width: 340px; }
+    .items-table th, .items-table td { padding: 8px 6px; }
+    .items-table th:first-child, .items-table td:first-child { padding-left: 1rem; }
+    .items-table th:last-child, .items-table td:last-child { padding-right: 1rem; }
+
+    /* Stack edit/delete buttons */
+    .edit-btn, .delete-btn { padding: 6px 10px; font-size: 12px; }
+    .delete-btn { margin-left: 2px; }
+
+    /* Modal full screen on mobile */
+    .overlay { padding: 0; align-items: flex-end; }
+    .modal { border-radius: 16px 16px 0 0; max-height: 95vh; }
+    .form-grid { grid-template-columns: 1fr; }
+    .form-group.full { grid-column: 1; }
+
+    /* Add item button smaller */
+    .add-item-btn span { display: none; }
+    .section-header { padding: 0.75rem 1rem; }
+  }
 </style>
 </head>
 <body>
@@ -167,10 +200,10 @@
             <tr>
               <th style="padding-left:1.5rem">Photo</th>
               <th>Item</th>
-              <th>Gender</th>
-              <th>Type</th>
-              <th>Colors</th>
-              <th>Sizes</th>
+              <th class="hide-mobile">Gender</th>
+              <th class="hide-mobile">Type</th>
+              <th class="hide-mobile">Colors</th>
+              <th class="hide-mobile">Sizes</th>
               <th>Cost</th>
               <th style="padding-right:1.5rem"></th>
             </tr>
@@ -365,10 +398,10 @@ function renderTable() {
     return `<tr>
       <td style="padding-left:1.5rem">${thumb}</td>
       <td><strong>${p.name}</strong></td>
-      <td>${p.gender ? `<span class="tag">${p.gender}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
-      <td>${p.type   ? `<span class="tag">${p.type}</span>`   : '<span style="color:var(--muted)">—</span>'}</td>
-      <td style="color:var(--muted);font-size:12px">${p.colors || '—'}</td>
-      <td style="color:var(--muted);font-size:12px">${p.sizes  || 'One size'}</td>
+      <td class="hide-mobile">${p.gender ? `<span class="tag">${p.gender}</span>` : '<span style="color:var(--muted)">—</span>'}</td>
+      <td class="hide-mobile">${p.type   ? `<span class="tag">${p.type}</span>`   : '<span style="color:var(--muted)">—</span>'}</td>
+      <td class="hide-mobile" style="color:var(--muted);font-size:12px">${p.colors || '—'}</td>
+      <td class="hide-mobile" style="color:var(--muted);font-size:12px">${p.sizes  || 'One size'}</td>
       <td><strong>${p.cost ? '$'+parseFloat(p.cost).toFixed(2) : '—'}</strong></td>
       <td style="padding-right:1.5rem;white-space:nowrap">
         <button class="edit-btn" onclick="openEditor(${i})">Edit</button>
