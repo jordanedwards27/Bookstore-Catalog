@@ -24,7 +24,8 @@
     --success-bg: #d8f3dc;
   }
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: var(--font-body); background: var(--bg); color: var(--text); height: 100vh; overflow: hidden; }
+  body { font-family: var(--font-body); background: var(--bg); color: var(--text); height: 100vh; }
+  #adminShell { height: 100vh; overflow: hidden; display: flex; flex-direction: column; }
 
   /* ── LOGIN ── */
   .login-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 1rem; }
@@ -51,7 +52,7 @@
   .logout-btn:hover { background: #1a1a1a; color: #fff; }
 
   /* ── ADMIN LAYOUT ── */
-  .admin-layout { max-width: 1100px; margin: 0 auto; padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; height: calc(100vh - 70px); overflow: hidden; }
+  .admin-layout { max-width: 1100px; margin: 0 auto; padding: 1rem 1.5rem; display: flex; flex-direction: column; gap: 1rem; flex: 1; overflow: hidden; }
 
   /* ── SECTION ── */
   .section { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); display: flex; flex-direction: column; flex: 1; overflow: hidden; }
@@ -578,6 +579,7 @@ async function importFromSS() {
 
 function setImportStatus(msg, type) {
   const el = document.getElementById('importStatus');
+  if (!el) return;
   el.textContent = msg;
   el.className = 'import-status' + (type ? ' '+type : '');
 }
