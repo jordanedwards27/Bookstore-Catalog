@@ -463,19 +463,21 @@ async function importFromSanmar() {
     const res = await fetch(proxy + encodeURIComponent(url));
     const text = await res.text();
 
-    // Name
-    const titleMatch = text.match(/meta-og:title:\s*(.+)/);
-    let name = titleMatch ? titleMatch[1].replace(/\s*\|.*$/, '').trim() : '';
+    // Name - from og:title meta tag in raw HTML
+    const titleMatch = text.match(/og:title[^>]*content="([^"]+)"/) ||
+                       text.match(/meta-og:title:\s*(.+)/) ||
+                       text.match(/<title>([^<]+)<\/title>/);
+    let name = titleMatch ? titleMatch[1].replace(/\s*\|\s*.*$/, '').trim() : '';
 
     // Price
     const priceMatch = text.match(/Starting at \$([0-9.]+)/);
     const price = priceMatch ? priceMatch[1] : '';
 
     // Sizes
-    const sizesMatch = text.match(/Sizes:\s*([A-Z0-9/ -]+?)(?:\s{2}|\n|$)/);
+    const sizesMatch = text.match(/Sizes:\s*([A-Z0-9/ -]+?)(?:<|\s{2}|\n)/);
     let sizes = '';
     if (sizesMatch) {
-      const raw = sizesMatch[1].trim();
+      const raw = sizesMatch[1].trim().replace(/<[^>]+>/g,'');
       const sizeOrder = ['XS','S','M','L','XL','2XL','3XL','4XL','5XL','6XL'];
       const parts = raw.split('-').map(s => s.trim().replace(/[^A-Z0-9]/g,''));
       if (parts.length === 2) {
@@ -486,58 +488,47 @@ async function importFromSanmar() {
       } else sizes = raw;
     }
 
-    // Colors — try multiple patterns
+    // Colors — handle both raw HTML and markdown formats
     const colors = [];
-    
-    // Pattern 1: markdown links like [Black Heather](javascript: iColor(...))
-    const colorRegex1 = /\[([^\]]+)\]\(javascript: iColor\(/g;
-    let cm1;
-    while ((cm1 = colorRegex1.exec(text)) !== null) {
-      const cName = cm1[1].trim();
+
+    // Raw HTML: <a href="javascript: iColor(...)" ...>Color Name</a>
+    const htmlColorRe = /iColor\([^)]+\)[^>]*>\s*([^<]+)\s*<\/a>/g;
+    let hm;
+    while ((hm = htmlColorRe.exec(text)) !== null) {
+      const cName = hm[1].trim();
       if (cName && !colors.find(c => c.name === cName)) colors.push({ name: cName });
     }
 
-    // Pattern 2: color links like /p/27873_BlkHthr "Black Heather"
+    // Markdown: [Color Name](javascript: iColor(...))
     if (!colors.length) {
-      const colorRegex2 = /\/p\/\d+_\w+[^"]*"\s*"([^"]+)"/g;
-      let cm2;
-      while ((cm2 = colorRegex2.exec(text)) !== null) {
-        const cName = cm2[1].trim();
+      const mdColorRe = /\[([^\]]+)\]\(javascript: iColor\(/g;
+      let mm;
+      while ((mm = mdColorRe.exec(text)) !== null) {
+        const cName = mm[1].trim();
         if (cName && !colors.find(c => c.name === cName)) colors.push({ name: cName });
       }
     }
 
-    // Pattern 3: extract from title "Color:" line
+    // Fallback: look for color names listed near the Color: label
     if (!colors.length) {
-      const colorBlock = text.match(/\*\*Color:\*\*\s*([\s\S]+?)(?=\n\n|\*\*)/);
-      if (colorBlock) {
-        colorBlock[1].split('\n').forEach(line => {
-          const name = line.replace(/\[([^\]]+)\].*/,'$1').trim();
-          if (name && name.length > 1 && !colors.find(c => c.name === name)) colors.push({ name });
-        });
-      }
-    }
-
-    // Pattern 4: look for the color section specifically showing color names as links
-    if (!colors.length) {
-      const colorSection = text.match(/\*\*Color:\*\*([\s\S]{0,500}?)(?=\[Add to Cart\]|\n\n\[Add to Cart\])/);
+      const colorSection = text.match(/(?:Color:|<strong>Color<\/strong>:?)([\s\S]{0,800}?)(?:Add to Cart|addToCart)/i);
       if (colorSection) {
-        const linkRe = /\[([^\]]+)\]\(/g;
+        const linkRe = /(?:>|^)\s*([A-Z][a-zA-Z\s/&]+?)(?:\s*<|\s*\[|\s*$)/gm;
         let lm;
         while ((lm = linkRe.exec(colorSection[1])) !== null) {
           const cName = lm[1].trim();
-          if (cName && cName !== 'Add to Cart' && !colors.find(c => c.name === cName)) {
+          if (cName.length > 2 && cName.length < 40 && !colors.find(c => c.name === cName)) {
             colors.push({ name: cName });
           }
         }
       }
     }
 
-    if (!colors.length) throw new Error('Could not find colors. Make sure it is a SanMar product page.');
+    if (!colors.length) throw new Error('Could not find colors. The proxy may be blocking SanMar. Try again in a moment.');
 
-    // Base image from og:image
-    const ogMatch = text.match(/meta-og:image:\s*(.+)/);
-    let baseImg = ogMatch ? ogMatch[1].trim().replace(/^https?:\/\/[^/]*\/(\/)?(cdn)/, 'https://$2') : '';
+    // Base image from og:image - handle both raw HTML and markdown
+    const ogMatch = text.match(/og:image[^>]*content="([^"]+)"/) || text.match(/meta-og:image:\s*(.+)/);
+    let baseImg = ogMatch ? ogMatch[1].trim().replace(/^https?:\/\/[^/]+\/(\/)?(cdn)/, 'https://$2') : '';
 
     // Style number from URL
     const styleMatch = url.match(/\/p\/(\d+)/);
@@ -552,8 +543,8 @@ async function importFromSanmar() {
         const colorUrl = 'https://www.sanmar.com/p/' + styleNum + '_' + colorCode;
         const cRes = await fetch(proxy + encodeURIComponent(colorUrl));
         const cText = await cRes.text();
-        const cImgMatch = cText.match(/meta-og:image:\s*(.+)/);
-        let img = cImgMatch ? cImgMatch[1].trim().replace(/^https?:\/\/[^/]*\/(\/)?(cdn)/, 'https://$2') : baseImg;
+        const cImgMatch = cText.match(/og:image[^>]*content="([^"]+)"/) || cText.match(/meta-og:image:\s*(.+)/);
+        let img = cImgMatch ? cImgMatch[1].trim().replace(/^https?:\/\/[^/]+\/(\/)?(cdn)/, 'https://$2') : baseImg;
         if (img.includes('ModelFront')) img = img.replace(/ModelFront\d*/g, 'ProductFront');
         return img || baseImg;
       } catch(e) { return baseImg; }
