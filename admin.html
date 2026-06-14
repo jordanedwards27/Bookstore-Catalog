@@ -478,8 +478,7 @@ async function importFromSS() {
     const price = priceMatch ? priceMatch[1] : '';
 
     // Extract sizes
-    const sizesMatch = text.match(/Sizes:\s*([^<
-]+)/);
+    const sizesMatch = text.match(/Sizes:\s*([^<\n]+)/);
     let sizes = '';
     if (sizesMatch) {
       // Convert "S - 4XL" to "S,M,L,XL,XXL,3XL,4XL" etc.
