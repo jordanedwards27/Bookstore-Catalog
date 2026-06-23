@@ -469,6 +469,8 @@ function openEditor(idx) {
   // Reset import bar
   document.getElementById('importUrl').value = '';
   setImportStatus('Paste a product URL from S&S Activewear or SanMar to auto-fill everything.', '');
+  const cntEl = document.getElementById('sanmarColorCount');
+  if (cntEl) cntEl.textContent = '';
 }
 
 // ── SANMAR FULL IMPORTER ─────────────────────────────────────────────
@@ -665,11 +667,8 @@ async function importFromSanmar() {
     const colorCode = colorCodeMatch ? colorCodeMatch[1] : '';
     if (!colorCode) throw new Error('Could not find color in URL. Make sure URL ends in _ColorName e.g. /p/1313_Black');
 
-    // Use Apps Script as server-side proxy (avoids CORS and JS rendering issues)
-    const proxyRes = await fetch(ADMIN_SCRIPT_URL + '?action=fetchPage&url=' + encodeURIComponent(url));
-    const proxyData = await proxyRes.json();
-    if (proxyData.error) throw new Error('Fetch failed: ' + proxyData.error);
-    const text = proxyData.html || '';
+    const res = await fetch('https://corsproxy.io/?' + encodeURIComponent(url));
+    const text = await res.text();
 
     // Name from title - remove " in ColorName | SanMar" suffix
     const titleMatch = text.match(/<title>([^<]+)<\/title>/);
@@ -734,9 +733,14 @@ async function importFromSanmar() {
     if (sizes && !document.getElementById('fSizes').value) document.getElementById('fSizes').value = sizes;
     if (imgUrl && !document.getElementById('fPhotoDisplay').value) document.getElementById('fPhotoDisplay').value = imgUrl;
 
-    // Clear URL field ready for next color
-    document.getElementById('importUrl').value = '';
-    setSanmarStatus('Added "' + colorName + '"! Paste the next color URL, or switch to S&S.', 'success');
+    // Clear URL field and focus for next color
+    const inp = document.getElementById('importUrl');
+    inp.value = '';
+    inp.focus();
+    // Update color counter
+    const countEl = document.getElementById('sanmarColorCount');
+    if (countEl) countEl.textContent = '(' + allColorData.length + ' color' + (allColorData.length !== 1 ? 's' : '') + ' added)';
+    setSanmarStatus('Added "' + colorName + '" - paste next color URL and press Enter, or save when done.', 'success');
 
   } catch(e) {
     setSanmarStatus('Error: ' + e.message, 'error');
@@ -878,6 +882,8 @@ function openEditor(idx) {
   // Reset import bar
   document.getElementById('importUrl').value = '';
   setImportStatus('Paste a product URL from S&S Activewear or SanMar to auto-fill everything.', '');
+  const cntEl = document.getElementById('sanmarColorCount');
+  if (cntEl) cntEl.textContent = '';
 }
 
 // ── SANMAR FULL IMPORTER ─────────────────────────────────────────────
