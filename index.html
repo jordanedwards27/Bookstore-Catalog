@@ -550,8 +550,16 @@ function showState(msg, err) {
 
 function driveUrl(url) {
   if (!url) return '';
-  const m = url.match(/[-\w]{25,}/);
-  return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w400` : url;
+  // Google Drive
+  if (url.includes('drive.google.com')) {
+    const m = url.match(/[-\w]{25,}/);
+    return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w400` : url;
+  }
+  // S&S and SanMar CDN - proxy to avoid CORS blocks
+  if (url.includes('cdn.ssactivewear.com') || url.includes('cdnp.sanmar.com') || url.includes('cdnm.sanmar.com')) {
+    return 'https://corsproxy.io/?' + encodeURIComponent(url);
+  }
+  return url;
 }
 
 // ── RENDER GRID ──────────────────────────────────────────────────────

@@ -369,8 +369,16 @@ async function loadItems() {
 
 function driveUrl(url) {
   if (!url) return '';
-  const m = url.match(/[-\w]{25,}/);
-  return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w80` : url;
+  // Google Drive
+  if (url.includes('drive.google.com')) {
+    const m = url.match(/[-\w]{25,}/);
+    return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w400` : url;
+  }
+  // S&S and SanMar CDN - proxy through corsproxy to avoid CORS blocks
+  if (url.includes('cdn.ssactivewear.com') || url.includes('cdnp.sanmar.com') || url.includes('cdnm.sanmar.com')) {
+    return 'https://corsproxy.io/?' + encodeURIComponent(url);
+  }
+  return url;
 }
 
 // Convert any Google Drive share link to a clean embeddable URL for storage
@@ -792,11 +800,7 @@ async function loadItems() {
   }
 }
 
-function driveUrl(url) {
-  if (!url) return '';
-  const m = url.match(/[-\w]{25,}/);
-  return m ? `https://drive.google.com/thumbnail?id=${m[0]}&sz=w80` : url;
-}
+
 
 // Convert any Google Drive share link to a clean embeddable URL for storage
 function cleanDriveUrl(url) {
